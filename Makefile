@@ -43,7 +43,7 @@ credo: ## Run Credo linter
 	docker-compose run --rm app mix credo --strict
 
 dialyzer: ## Run Dialyzer type checker
-	docker-compose run --rm app mix dialyzer
+	docker-compose run --rm -e MIX_ENV=test app mix dialyzer
 
 check: format-check credo test dialyzer deps-audit  ## Run all pre-commit checks
 

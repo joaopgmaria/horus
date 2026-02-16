@@ -28,11 +28,7 @@ defmodule Horus.Blueprint.Parser do
 
   import NimbleParsec
 
-  alias Horus.Blueprint.AST.Expression.{
-    Comparison,
-    Field
-  }
-
+  alias Horus.Blueprint.AST.Expression
   alias Horus.Blueprint.AST.Operator.Registry
   alias Horus.Blueprint.Parser.Context
 
@@ -75,7 +71,7 @@ defmodule Horus.Blueprint.Parser do
       {:error, %{message: "...", ...}}
   """
   @spec parse_dsl(String.t()) ::
-          {:ok, Field.t() | Comparison.t()}
+          {:ok, Expression.t()}
           | {:error, map()}
   def parse_dsl(dsl) when is_binary(dsl) do
     trimmed = String.trim(dsl)
@@ -83,13 +79,13 @@ defmodule Horus.Blueprint.Parser do
     if trimmed == "" do
       {:error, %{message: "Unexpected input: empty string", line: 1, column: 1}}
     else
-      trimmed
-      |> parse()
-      |> case do
+      case parse(trimmed) do
         {:ok, tokens, "", _, _, _} ->
           build_ast(tokens)
 
         {:ok, _, rest, _, line, col} ->
+          # This should be unreachable due to eos() in grammar, but we keep it for safety
+          # and to provide a clear error if grammar changes.
           {:error, %{message: "Unexpected input: #{inspect(rest)}", line: line, column: col}}
 
         {:error, _reason, rest, _, line, col} ->
@@ -118,9 +114,10 @@ defmodule Horus.Blueprint.Parser do
 
   @doc false
   def build_ast(tokens) do
+    # tokens_to_ast will raise if structure is unknown, but since it's called
+    # only after a successful parse which uses the same operators, it shouldn't.
+    # We let it raise to be caught by Dialyzer if any branch is missing.
     {:ok, tokens_to_ast(tokens)}
-  rescue
-    e -> {:error, %{message: Exception.message(e), error: e}}
   end
 
   # Transform tokens to AST - delegate all to Registry

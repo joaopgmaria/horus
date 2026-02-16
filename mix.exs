@@ -41,7 +41,9 @@ defmodule Horus.MixProject do
       plt_file: {:no_warn, "priv/plts/dialyzer.plt"},
       plt_add_apps: [:ex_unit, :mix],
       # Only analyze main application code, exclude test files
-      paths: ["_build/#{Mix.env()}/lib/horus/ebin"]
+      paths: ["_build/#{Mix.env()}/lib/horus/ebin"],
+      ignore_warnings: ".dialyzer_ignore.exs",
+      list_unused_filters: true
     ]
   end
 

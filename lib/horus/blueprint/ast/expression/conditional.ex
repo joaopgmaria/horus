@@ -11,16 +11,16 @@ defmodule Horus.Blueprint.AST.Expression.Conditional do
 
   ## Examples
 
-      # "if ${country} is a string then ${postal_code} is required"
+      # "if ${customer} exists then ${email} is required"
       %Conditional{
         condition: %Comparison{
-          operator: :type_check,
-          left: %Field{path: "${country}"},
-          right: %Type{type: :string}
+          operator: :presence,
+          left: %Field{path: "${customer}"},
+          right: nil
         },
         then_expr: %Comparison{
           operator: :presence,
-          left: %Field{path: "${postal_code}"},
+          left: %Field{path: "${email}"},
           right: nil
         }
       }

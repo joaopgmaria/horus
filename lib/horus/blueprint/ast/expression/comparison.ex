@@ -2,23 +2,13 @@ defmodule Horus.Blueprint.AST.Expression.Comparison do
   @moduledoc """
   Represents a binary comparison operation.
 
-  Used for all comparison-based validations including type checks,
-  equality checks, and presence checks.
+  Currently only supports presence checks.
 
   ## Operators
 
-  - `:type_check` - Type checking: `${field} is a string`
-  - `:equality` - Equality: `${field} equals ${value}` or `${field} is ${value}`
   - `:presence` - Presence: `${field} exists` / `${field} is required` (right is nil)
 
   ## Examples
-
-      # Type check
-      %Comparison{
-        operator: :type_check,
-        left: %Field{path: "${field}"},
-        right: %Type{type: :string}
-      }
 
       # Presence check
       %Comparison{
@@ -26,16 +16,9 @@ defmodule Horus.Blueprint.AST.Expression.Comparison do
         left: %Field{path: "${field}"},
         right: nil
       }
-
-      # Equality
-      %Comparison{
-        operator: :equality,
-        left: %Field{path: "${field}"},
-        right: %Field{path: "${expected}"}
-      }
   """
 
-  @type operator :: :type_check | :equality | :presence
+  @type operator :: :presence
 
   @type t :: %__MODULE__{
           operator: operator(),
