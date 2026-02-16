@@ -1,0 +1,26 @@
+# Development Dockerfile for Horus
+FROM elixir:1.18-alpine
+
+# Install build dependencies
+RUN apk add --no-cache \
+    build-base \
+    git \
+    nodejs \
+    npm \
+    postgresql-client \
+    inotify-tools
+
+# Install Hex and Rebar
+RUN mix local.hex --force && \
+    mix local.rebar --force
+
+# Install Phoenix
+RUN mix archive.install hex phx_new --force
+
+# Set working directory
+WORKDIR /app
+
+# Expose Phoenix port
+EXPOSE 4000
+
+CMD ["sh"]

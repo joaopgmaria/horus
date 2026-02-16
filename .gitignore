@@ -78,3 +78,9 @@ cover/
 
 # Postman collections (keep local only)
 *.postman_collection.json
+
+# Docker development
+.env.docker
+
+# Dialyzer PLT files
+/priv/plts/

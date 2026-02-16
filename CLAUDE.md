@@ -487,3 +487,4 @@ iex -S mix
 - Consider using behaviours for validator contracts
 - Ensure validation errors are structured and informative
 - Test edge cases thoroughly
+- Run make check before commiting changes
