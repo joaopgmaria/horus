@@ -1,4 +1,4 @@
-defmodule Horus.Blueprint.Operator.Registry do
+defmodule Horus.Blueprint.AST.Operator.Registry do
   @moduledoc """
   Registry of all available Blueprint DSL operators.
 
@@ -19,10 +19,10 @@ defmodule Horus.Blueprint.Operator.Registry do
 
   Example configuration:
       config :horus, :blueprint_operators, [
-        Horus.Blueprint.Operator.Presence,   # "exists" / "is required" / "is present" (before "is")
-        Horus.Blueprint.Operator.TypeCheck,  # "is a" (before "is")
-        Horus.Blueprint.Operator.Equality,   # "equals" or "is"
-        Horus.Blueprint.Operator.Conditional # "if...then"
+        Horus.Blueprint.AST.Operator.Presence,   # "exists" / "is required" / "is present" (before "is")
+        Horus.Blueprint.AST.Operator.TypeCheck,  # "is a" (before "is")
+        Horus.Blueprint.AST.Operator.Equality,   # "equals" or "is"
+        Horus.Blueprint.AST.Operator.Conditional # "if...then"
       ]
 
   ## Architecture
@@ -59,7 +59,7 @@ defmodule Horus.Blueprint.Operator.Registry do
   ## Examples
 
       iex> Registry.list_all_operators()
-      [Operators.Presence, Operators.IsA, Operators.Equals, Operators.Conditional]
+      [Operators.Presence, Operators.TypeCheck, Operators.Equality, Operators.Conditional]
   """
   @spec list_all_operators() :: [module()]
   def list_all_operators, do: @operators
@@ -101,7 +101,7 @@ defmodule Horus.Blueprint.Operator.Registry do
 
       iex> tokens = [{:presence, [{:placeholder, "field"}, {:operator, :presence}]}]
       iex> Registry.tokens_to_ast(tokens)
-      %ComparisonExpression{operator: :presence, ...}
+      %Comparison{operator: :presence, ...}
   """
   @spec tokens_to_ast(tokens :: list()) :: Horus.Blueprint.AST.Expression.t()
   def tokens_to_ast(tokens) do
@@ -163,7 +163,7 @@ defmodule Horus.Blueprint.Operator.Registry do
       unless function_exported?(mod, :operator_name, 0) and
                function_exported?(mod, :parser_combinator, 1) and
                function_exported?(mod, :tokens_to_ast, 1) do
-        raise "Module #{inspect(mod)} does not implement Horus.Blueprint.Operator behaviour"
+        raise "Module #{inspect(mod)} does not implement Horus.Blueprint.AST.Operator behaviour"
       end
     end)
   end

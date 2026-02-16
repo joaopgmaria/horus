@@ -1,16 +1,16 @@
 defmodule Horus.Blueprint.ParserTest do
   use ExUnit.Case, async: true
 
-  alias Horus.Blueprint.AST.{ComparisonExpression, FieldExpression}
+  alias Horus.Blueprint.AST.Expression.{Comparison, Field}
   alias Horus.Blueprint.Parser
 
   describe "parse_dsl/1 - integration with Registry" do
     test "successfully parses Presence operator" do
       {:ok, ast} = Parser.parse_dsl("${field} exists")
 
-      assert %ComparisonExpression{
+      assert %Comparison{
                operator: :presence,
-               left: %FieldExpression{path: "${field}", placeholder?: true},
+               left: %Field{path: "${field}", placeholder?: true},
                right: nil
              } = ast
     end
@@ -18,7 +18,7 @@ defmodule Horus.Blueprint.ParserTest do
     test "delegates to Registry for operator-specific parsing" do
       # Verify parser correctly routes to Registry
       {:ok, ast} = Parser.parse_dsl("${email} is required")
-      assert %ComparisonExpression{operator: :presence} = ast
+      assert %Comparison{operator: :presence} = ast
     end
 
     test "handles whitespace correctly" do
@@ -30,7 +30,7 @@ defmodule Horus.Blueprint.ParserTest do
       ]
 
       for dsl <- variations do
-        assert {:ok, %ComparisonExpression{operator: :presence}} = Parser.parse_dsl(dsl)
+        assert {:ok, %Comparison{operator: :presence}} = Parser.parse_dsl(dsl)
       end
     end
 
@@ -40,7 +40,7 @@ defmodule Horus.Blueprint.ParserTest do
       for placeholder <- placeholders do
         {:ok, ast} = Parser.parse_dsl("${#{placeholder}} exists")
         expected_path = "${#{placeholder}}"
-        assert %ComparisonExpression{left: %FieldExpression{path: ^expected_path}} = ast
+        assert %Comparison{left: %Field{path: ^expected_path}} = ast
       end
     end
   end

@@ -1,8 +1,8 @@
-defmodule Horus.Blueprint.Operator.PresenceTest do
+defmodule Horus.Blueprint.AST.Operator.PresenceTest do
   use ExUnit.Case, async: true
 
-  alias Horus.Blueprint.AST.{ComparisonExpression, FieldExpression}
-  alias Horus.Blueprint.Operator.Presence
+  alias Horus.Blueprint.AST.Expression.{Comparison, Field}
+  alias Horus.Blueprint.AST.Operator.Presence
   alias Horus.Blueprint.Parser
 
   describe "operator metadata" do
@@ -31,9 +31,9 @@ defmodule Horus.Blueprint.Operator.PresenceTest do
 
       ast = Presence.tokens_to_ast(tokens)
 
-      assert %ComparisonExpression{
+      assert %Comparison{
                operator: :presence,
-               left: %FieldExpression{path: "${email}", placeholder?: true},
+               left: %Field{path: "${email}", placeholder?: true},
                right: nil
              } = ast
     end
@@ -43,9 +43,9 @@ defmodule Horus.Blueprint.Operator.PresenceTest do
 
       ast = Presence.tokens_to_ast(tokens)
 
-      assert %ComparisonExpression{
+      assert %Comparison{
                operator: :presence,
-               left: %FieldExpression{path: "${first_name}", placeholder?: true},
+               left: %Field{path: "${first_name}", placeholder?: true},
                right: nil
              } = ast
     end
@@ -55,9 +55,9 @@ defmodule Horus.Blueprint.Operator.PresenceTest do
 
       ast = Presence.tokens_to_ast(tokens)
 
-      assert %ComparisonExpression{
+      assert %Comparison{
                operator: :presence,
-               left: %FieldExpression{path: "${field123}", placeholder?: true},
+               left: %Field{path: "${field123}", placeholder?: true},
                right: nil
              } = ast
     end
@@ -67,9 +67,9 @@ defmodule Horus.Blueprint.Operator.PresenceTest do
     test "parses main form 'exists'" do
       {:ok, ast} = Parser.parse_dsl("${email} exists")
 
-      assert %ComparisonExpression{
+      assert %Comparison{
                operator: :presence,
-               left: %FieldExpression{path: "${email}", placeholder?: true},
+               left: %Field{path: "${email}", placeholder?: true},
                right: nil
              } = ast
     end
@@ -77,9 +77,9 @@ defmodule Horus.Blueprint.Operator.PresenceTest do
     test "parses form 'must exist'" do
       {:ok, ast} = Parser.parse_dsl("${email} must exist")
 
-      assert %ComparisonExpression{
+      assert %Comparison{
                operator: :presence,
-               left: %FieldExpression{path: "${email}", placeholder?: true},
+               left: %Field{path: "${email}", placeholder?: true},
                right: nil
              } = ast
     end
@@ -87,9 +87,9 @@ defmodule Horus.Blueprint.Operator.PresenceTest do
     test "parses form 'should exist'" do
       {:ok, ast} = Parser.parse_dsl("${email} should exist")
 
-      assert %ComparisonExpression{
+      assert %Comparison{
                operator: :presence,
-               left: %FieldExpression{path: "${email}", placeholder?: true},
+               left: %Field{path: "${email}", placeholder?: true},
                right: nil
              } = ast
     end
@@ -97,9 +97,9 @@ defmodule Horus.Blueprint.Operator.PresenceTest do
     test "parses alias 'is required'" do
       {:ok, ast} = Parser.parse_dsl("${email} is required")
 
-      assert %ComparisonExpression{
+      assert %Comparison{
                operator: :presence,
-               left: %FieldExpression{path: "${email}", placeholder?: true},
+               left: %Field{path: "${email}", placeholder?: true},
                right: nil
              } = ast
     end
@@ -107,9 +107,9 @@ defmodule Horus.Blueprint.Operator.PresenceTest do
     test "parses alias 'is present'" do
       {:ok, ast} = Parser.parse_dsl("${email} is present")
 
-      assert %ComparisonExpression{
+      assert %Comparison{
                operator: :presence,
-               left: %FieldExpression{path: "${email}", placeholder?: true},
+               left: %Field{path: "${email}", placeholder?: true},
                right: nil
              } = ast
     end
@@ -117,9 +117,9 @@ defmodule Horus.Blueprint.Operator.PresenceTest do
     test "parses alias 'must be present'" do
       {:ok, ast} = Parser.parse_dsl("${email} must be present")
 
-      assert %ComparisonExpression{
+      assert %Comparison{
                operator: :presence,
-               left: %FieldExpression{path: "${email}", placeholder?: true},
+               left: %Field{path: "${email}", placeholder?: true},
                right: nil
              } = ast
     end
@@ -127,9 +127,9 @@ defmodule Horus.Blueprint.Operator.PresenceTest do
     test "parses alias 'should be present'" do
       {:ok, ast} = Parser.parse_dsl("${email} should be present")
 
-      assert %ComparisonExpression{
+      assert %Comparison{
                operator: :presence,
-               left: %FieldExpression{path: "${email}", placeholder?: true},
+               left: %Field{path: "${email}", placeholder?: true},
                right: nil
              } = ast
     end
@@ -137,9 +137,9 @@ defmodule Horus.Blueprint.Operator.PresenceTest do
     test "parses alias 'must be filled in'" do
       {:ok, ast} = Parser.parse_dsl("${email} must be filled in")
 
-      assert %ComparisonExpression{
+      assert %Comparison{
                operator: :presence,
-               left: %FieldExpression{path: "${email}", placeholder?: true},
+               left: %Field{path: "${email}", placeholder?: true},
                right: nil
              } = ast
     end
@@ -147,9 +147,9 @@ defmodule Horus.Blueprint.Operator.PresenceTest do
     test "parses alias 'should be filled in'" do
       {:ok, ast} = Parser.parse_dsl("${email} should be filled in")
 
-      assert %ComparisonExpression{
+      assert %Comparison{
                operator: :presence,
-               left: %FieldExpression{path: "${email}", placeholder?: true},
+               left: %Field{path: "${email}", placeholder?: true},
                right: nil
              } = ast
     end

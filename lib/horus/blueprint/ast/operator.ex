@@ -1,4 +1,4 @@
-defmodule Horus.Blueprint.Operator do
+defmodule Horus.Blueprint.AST.Operator do
   @moduledoc """
   Behaviour for Blueprint DSL operators.
 
@@ -11,7 +11,7 @@ defmodule Horus.Blueprint.Operator do
   The `parser_combinator/1` is provided automatically by default:
 
       defmodule MyOperator do
-        use Horus.Blueprint.Operator
+        use Horus.Blueprint.AST.Operator
 
         @impl true
         def operator_name, do: :my_operator
@@ -36,7 +36,7 @@ defmodule Horus.Blueprint.Operator do
 
   ## Operator Registry
 
-  Once implemented, register the operator in `Horus.Blueprint.Operator.Registry`
+  Once implemented, register the operator in `Horus.Blueprint.AST.Operator.Registry`
   by adding it to the `@operators` module attribute. The registry will automatically
   compose all operators into the parser.
   """
@@ -52,7 +52,7 @@ defmodule Horus.Blueprint.Operator do
   ## Example
 
       defmodule MyOperator do
-        use Horus.Blueprint.Operator
+        use Horus.Blueprint.AST.Operator
 
         @impl true
         def operator_name, do: :my_operator
@@ -68,7 +68,7 @@ defmodule Horus.Blueprint.Operator do
   """
   defmacro __using__(_opts) do
     quote do
-      @behaviour Horus.Blueprint.Operator
+      @behaviour Horus.Blueprint.AST.Operator
       import NimbleParsec
 
       @doc """
@@ -85,7 +85,7 @@ defmodule Horus.Blueprint.Operator do
         # Build combinators for all forms dynamically
         operator_forms()
         |> Enum.map(
-          &Horus.Blueprint.Operator.build_form_combinator(
+          &Horus.Blueprint.AST.Operator.build_form_combinator(
             ctx,
             &1,
             operator_name()
@@ -147,7 +147,7 @@ defmodule Horus.Blueprint.Operator do
   @doc """
   Returns a NimbleParsec combinator that parses this operator's syntax.
 
-  **Default Implementation**: When you `use Horus.Blueprint.Operator`, a default
+  **Default Implementation**: When you `use Horus.Blueprint.AST.Operator`, a default
   implementation is provided that works for most operators. It iterates over
   `operator_forms/0` and builds combinators for each form.
 
@@ -166,7 +166,7 @@ defmodule Horus.Blueprint.Operator do
 
       def parser_combinator(ctx) do
         operator_forms()
-        |> Enum.map(&Horus.Blueprint.Operator.build_form_combinator(ctx, &1, operator_name()))
+        |> Enum.map(&Horus.Blueprint.AST.Operator.build_form_combinator(ctx, &1, operator_name()))
         |> choice()
       end
 
@@ -183,12 +183,12 @@ defmodule Horus.Blueprint.Operator do
   Converts parsed tokens into an AST expression.
 
   Receives tokens tagged with this operator's expression tag and constructs
-  the corresponding AST node (typically a ComparisonExpression or ConditionalExpression).
+  the corresponding AST node (typically a Comparison or Conditional).
 
   ## Examples
 
       def tokens_to_ast([{:my_operator_check, tokens}]) do
-        %ComparisonExpression{
+        %Comparison{
           operator: :my_operator,
           # ... build AST from tokens
         }

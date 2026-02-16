@@ -10,14 +10,14 @@ defmodule Horus.Blueprint.Compiler do
 
       iex> compile("${field} is a string")
       {:ok, %{
-        ast: %ComparisonExpression{...},
+        ast: %Comparison{...},
         parameters: [%{name: "${field}", occurrences: 1, ...}],
         json: %{"type" => "comparison", ...}
       }}
 
       iex> compile("if ${country} is a string then ${postal_code} is required")
       {:ok, %{
-        ast: %ConditionalExpression{...},
+        ast: %Conditional{...},
         parameters: [
           %{name: "${country}", occurrences: 1, ...},
           %{name: "${postal_code}", occurrences: 1, ...}
@@ -60,15 +60,15 @@ defmodule Horus.Blueprint.Compiler do
 
       iex> compile("${field} is a string")
       {:ok, %{
-        ast: %ComparisonExpression{
-          operator: :is_a,
-          left: %FieldExpression{path: "${field}"},
-          right: %TypeExpression{type: :string}
+        ast: %Comparison{
+          operator: :type_check,
+          left: %Field{path: "${field}"},
+          right: %Type{type: :string}
         },
         parameters: [%{name: "${field}", occurrences: 1}],
         json: %{
           "type" => "comparison",
-          "operator" => "is_a",
+          "operator" => "type_check",
           "left" => %{"type" => "field", "path" => "${field}", "placeholder" => true},
           "right" => %{"type" => "type", "value" => "string"}
         }
@@ -95,23 +95,23 @@ defmodule Horus.Blueprint.Compiler do
 
   ## Examples
 
-      iex> ast = %ComparisonExpression{
-      ...>   operator: :equals,
-      ...>   left: %FieldExpression{path: "${field}"},
-      ...>   right: %FieldExpression{path: "${field}"}
+      iex> ast = %Comparison{
+      ...>   operator: :equality,
+      ...>   left: %Field{path: "${field}"},
+      ...>   right: %Field{path: "${field}"}
       ...> }
       iex> extract_parameters(ast)
       [%{name: "${field}", occurrences: 2}]
 
-      iex> ast = %ConditionalExpression{
-      ...>   condition: %ComparisonExpression{
-      ...>     operator: :is_a,
-      ...>     left: %FieldExpression{path: "${country}"},
-      ...>     right: %TypeExpression{type: :string}
+      iex> ast = %Conditional{
+      ...>   condition: %Comparison{
+      ...>     operator: :type_check,
+      ...>     left: %Field{path: "${country}"},
+      ...>     right: %Type{type: :string}
       ...>   },
-      ...>   then_expr: %ComparisonExpression{
+      ...>   then_expr: %Comparison{
       ...>     operator: :required,
-      ...>     left: %FieldExpression{path: "${postal_code}"},
+      ...>     left: %Field{path: "${postal_code}"},
       ...>     right: nil
       ...>   }
       ...> }

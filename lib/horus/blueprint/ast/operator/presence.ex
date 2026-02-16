@@ -1,4 +1,4 @@
-defmodule Horus.Blueprint.Operator.Presence do
+defmodule Horus.Blueprint.AST.Operator.Presence do
   @moduledoc """
   "presence" operator - checks field presence.
 
@@ -30,20 +30,20 @@ defmodule Horus.Blueprint.Operator.Presence do
 
   ## AST Output
 
-  Produces a ComparisonExpression with operator `:presence`:
+  Produces a Comparison with operator `:presence`:
 
-      %ComparisonExpression{
+      %Comparison{
         operator: :presence,
-        left: %FieldExpression{path: "${field}", placeholder?: true},
+        left: %Field{path: "${field}", placeholder?: true},
         right: nil
       }
 
   The `right` side is `nil` because presence checks don't compare against a value.
   """
 
-  use Horus.Blueprint.Operator
+  use Horus.Blueprint.AST.Operator
 
-  alias Horus.Blueprint.AST.{ComparisonExpression, FieldExpression}
+  alias Horus.Blueprint.AST.Expression.{Comparison, Field}
 
   @impl true
   def operator_name, do: :presence
@@ -63,13 +63,13 @@ defmodule Horus.Blueprint.Operator.Presence do
     ]
   end
 
-  # Note: parser_combinator/1 is provided by `use Horus.Blueprint.Operator`
+  # Note: parser_combinator/1 is provided by `use Horus.Blueprint.AST.Operator`
 
   @impl true
   def tokens_to_ast([{:presence, [{:placeholder, field}, {:operator, :presence}]}]) do
-    %ComparisonExpression{
+    %Comparison{
       operator: :presence,
-      left: %FieldExpression{path: "${#{field}}", placeholder?: true},
+      left: %Field{path: "${#{field}}", placeholder?: true},
       right: nil
     }
   end

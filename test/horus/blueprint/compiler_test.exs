@@ -1,7 +1,7 @@
 defmodule Horus.Blueprint.CompilerTest do
   use ExUnit.Case, async: true
 
-  alias Horus.Blueprint.AST.{ComparisonExpression, FieldExpression}
+  alias Horus.Blueprint.AST.Expression.{Comparison, Field}
   alias Horus.Blueprint.Compiler
 
   describe "compile/1 - successful compilation" do
@@ -9,9 +9,9 @@ defmodule Horus.Blueprint.CompilerTest do
       {:ok, result} = Compiler.compile("${field} exists")
 
       # Check AST
-      assert %ComparisonExpression{
+      assert %Comparison{
                operator: :presence,
-               left: %FieldExpression{path: "${field}"},
+               left: %Field{path: "${field}"},
                right: nil
              } = result.ast
 
@@ -25,14 +25,14 @@ defmodule Horus.Blueprint.CompilerTest do
     test "compiles presence check with 'is required' form" do
       {:ok, result} = Compiler.compile("${email} is required")
 
-      assert %ComparisonExpression{operator: :presence} = result.ast
+      assert %Comparison{operator: :presence} = result.ast
       assert [%{name: "${email}", occurrences: 1}] = result.parameters
     end
 
     test "compiles presence check with 'must be present' form" do
       {:ok, result} = Compiler.compile("${email} must be present")
 
-      assert %ComparisonExpression{operator: :presence} = result.ast
+      assert %Comparison{operator: :presence} = result.ast
       assert [%{name: "${email}", occurrences: 1}] = result.parameters
     end
   end

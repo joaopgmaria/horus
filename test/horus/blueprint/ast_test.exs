@@ -4,25 +4,25 @@ defmodule Horus.Blueprint.ASTTest do
   alias Horus.Blueprint.AST
   alias Horus.Blueprint.AST.Expression
 
-  alias Horus.Blueprint.AST.{
-    ComparisonExpression,
-    FieldExpression
+  alias Horus.Blueprint.AST.Expression.{
+    Comparison,
+    Field
   }
 
-  describe "FieldExpression" do
+  describe "Field" do
     test "creates with path and placeholder flag" do
-      expr = %FieldExpression{path: "${field}", placeholder?: true}
+      expr = %Field{path: "${field}", placeholder?: true}
       assert expr.path == "${field}"
       assert expr.placeholder? == true
     end
 
     test "defaults placeholder? to true" do
-      expr = %FieldExpression{path: "${field}"}
+      expr = %Field{path: "${field}"}
       assert expr.placeholder? == true
     end
 
     test "serializes to JSON" do
-      expr = %FieldExpression{path: "${field}", placeholder?: true}
+      expr = %Field{path: "${field}", placeholder?: true}
 
       assert Expression.to_json(expr) == %{
                "type" => "field",
@@ -32,7 +32,7 @@ defmodule Horus.Blueprint.ASTTest do
     end
 
     test "serializes literal path to JSON" do
-      expr = %FieldExpression{path: "/customer/email", placeholder?: false}
+      expr = %Field{path: "/customer/email", placeholder?: false}
 
       assert Expression.to_json(expr) == %{
                "type" => "field",
@@ -42,26 +42,26 @@ defmodule Horus.Blueprint.ASTTest do
     end
 
     test "extracts parameters from placeholder" do
-      expr = %FieldExpression{path: "${field}", placeholder?: true}
+      expr = %Field{path: "${field}", placeholder?: true}
       assert Expression.extract_parameters(expr) == ["${field}"]
     end
 
     test "does not extract parameters from literal path" do
-      expr = %FieldExpression{path: "/customer/email", placeholder?: false}
+      expr = %Field{path: "/customer/email", placeholder?: false}
       assert Expression.extract_parameters(expr) == []
     end
 
     test "deserializes from JSON" do
       json = %{"type" => "field", "path" => "${field}", "placeholder" => true}
-      assert AST.from_json(json) == %FieldExpression{path: "${field}", placeholder?: true}
+      assert AST.from_json(json) == %Field{path: "${field}", placeholder?: true}
     end
   end
 
-  describe "ComparisonExpression - Presence operator" do
+  describe "Comparison - Presence operator" do
     test "creates presence check expression" do
-      expr = %ComparisonExpression{
+      expr = %Comparison{
         operator: :presence,
-        left: %FieldExpression{path: "${field}", placeholder?: true},
+        left: %Field{path: "${field}", placeholder?: true},
         right: nil
       }
 
@@ -71,9 +71,9 @@ defmodule Horus.Blueprint.ASTTest do
     end
 
     test "serializes presence check to JSON" do
-      expr = %ComparisonExpression{
+      expr = %Comparison{
         operator: :presence,
-        left: %FieldExpression{path: "${field}", placeholder?: true},
+        left: %Field{path: "${field}", placeholder?: true},
         right: nil
       }
 
@@ -86,9 +86,9 @@ defmodule Horus.Blueprint.ASTTest do
     end
 
     test "extracts parameters from presence check" do
-      expr = %ComparisonExpression{
+      expr = %Comparison{
         operator: :presence,
-        left: %FieldExpression{path: "${field}", placeholder?: true},
+        left: %Field{path: "${field}", placeholder?: true},
         right: nil
       }
 
@@ -103,18 +103,18 @@ defmodule Horus.Blueprint.ASTTest do
         "right" => nil
       }
 
-      assert AST.from_json(json) == %ComparisonExpression{
+      assert AST.from_json(json) == %Comparison{
                operator: :presence,
-               left: %FieldExpression{path: "${field}", placeholder?: true},
+               left: %Field{path: "${field}", placeholder?: true},
                right: nil
              }
     end
 
     test "extracts multiple occurrences of same parameter" do
       # Note: Presence operator only has one field, but this tests parameter extraction behavior
-      expr = %ComparisonExpression{
+      expr = %Comparison{
         operator: :presence,
-        left: %FieldExpression{path: "${field}", placeholder?: true},
+        left: %Field{path: "${field}", placeholder?: true},
         right: nil
       }
 
@@ -124,18 +124,18 @@ defmodule Horus.Blueprint.ASTTest do
   end
 
   describe "round-trip serialization - Presence operator" do
-    test "FieldExpression round-trips through JSON" do
-      original = %FieldExpression{path: "${customer_email}", placeholder?: true}
+    test "Field round-trips through JSON" do
+      original = %Field{path: "${customer_email}", placeholder?: true}
       json = Expression.to_json(original)
       deserialized = AST.from_json(json)
 
       assert deserialized == original
     end
 
-    test "ComparisonExpression (presence) round-trips through JSON" do
-      original = %ComparisonExpression{
+    test "Comparison (presence) round-trips through JSON" do
+      original = %Comparison{
         operator: :presence,
-        left: %FieldExpression{path: "${email}", placeholder?: true},
+        left: %Field{path: "${email}", placeholder?: true},
         right: nil
       }
 

@@ -11,29 +11,29 @@ defmodule Horus.Blueprint.Parser do
       "must be present", "should be present", "must be filled in", "should be filled in"
     - Example: `${email} exists`, `${email} is required`
 
-  Additional operators (IsA, Equals, Conditional) will be added in separate PRs
+  Additional operators (type_check, equality, conditional) will be added in separate PRs
   following the operator registry pattern.
 
   ## Examples
 
       iex> parse_dsl("${email} exists")
-      {:ok, %ComparisonExpression{operator: :presence, ...}}
+      {:ok, %Comparison{operator: :presence, ...}}
 
       iex> parse_dsl("${email} is required")
-      {:ok, %ComparisonExpression{operator: :presence, ...}}
+      {:ok, %Comparison{operator: :presence, ...}}
 
       iex> parse_dsl("${email} must be present")
-      {:ok, %ComparisonExpression{operator: :presence, ...}}
+      {:ok, %Comparison{operator: :presence, ...}}
   """
 
   import NimbleParsec
 
-  alias Horus.Blueprint.AST.{
-    ComparisonExpression,
-    FieldExpression
+  alias Horus.Blueprint.AST.Expression.{
+    Comparison,
+    Field
   }
 
-  alias Horus.Blueprint.Operator.Registry
+  alias Horus.Blueprint.AST.Operator.Registry
   alias Horus.Blueprint.Parser.Context
 
   # Build parser context at compile time
@@ -62,20 +62,20 @@ defmodule Horus.Blueprint.Parser do
   ## Examples
 
       iex> parse_dsl("${email} exists")
-      {:ok, %ComparisonExpression{
+      {:ok, %Comparison{
         operator: :presence,
-        left: %FieldExpression{path: "${email}", placeholder?: true},
+        left: %Field{path: "${email}", placeholder?: true},
         right: nil
       }}
 
       iex> parse_dsl("${email} is required")
-      {:ok, %ComparisonExpression{operator: :presence, ...}}
+      {:ok, %Comparison{operator: :presence, ...}}
 
       iex> parse_dsl("invalid syntax")
       {:error, %{message: "...", ...}}
   """
   @spec parse_dsl(String.t()) ::
-          {:ok, FieldExpression.t() | ComparisonExpression.t()}
+          {:ok, Field.t() | Comparison.t()}
           | {:error, map()}
   def parse_dsl(dsl) when is_binary(dsl) do
     trimmed = String.trim(dsl)

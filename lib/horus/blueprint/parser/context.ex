@@ -52,7 +52,7 @@ defmodule Horus.Blueprint.Parser.Context do
     }
   end
 
-  # Private combinators extracted from parser.ex
+  # --- Combinator Definitions ---
 
   # Placeholder: ${identifier}
   # Identifier can contain lowercase letters, underscores, and numbers
@@ -86,7 +86,7 @@ defmodule Horus.Blueprint.Parser.Context do
     |> unwrap_and_tag(:type)
   end
 
-  # Modal verbs: "is", "must be", "should be" (all equivalent)
+  # Modal verbs: "is", "must be", "should be", "has to be" (all equivalent)
   # Global DSL convention - these forms are interchangeable for all operators
   defp modal_verb do
     choice([
