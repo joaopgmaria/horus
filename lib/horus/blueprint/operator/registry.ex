@@ -7,16 +7,22 @@ defmodule Horus.Blueprint.Operator.Registry do
 
   ## Operator Registration
 
-  Operators are registered by adding them to the `@operators` module attribute.
+  Operators are registered in application configuration (`config/config.exs`).
+  This allows different operators to be enabled per environment, enabling
+  testing new operators in dev/test before promoting to production.
+
+  Configuration is read at compile time, so operators are still "baked in"
+  for fast performance, but can differ between environments.
+
   Order matters - operators are tried in sequence, so more specific operators
   should be listed before more generic ones.
 
-  Example:
-      @operators [
-        Operators.Presence,   # "exists" / "is required" / "is present" (before "is")
-        Operators.IsA,        # "is a" (before "is")
-        Operators.Equals,     # "equals" or "is"
-        Operators.Conditional # "if...then"
+  Example configuration:
+      config :horus, :blueprint_operators, [
+        Horus.Blueprint.Operator.Presence,   # "exists" / "is required" / "is present" (before "is")
+        Horus.Blueprint.Operator.TypeCheck,  # "is a" (before "is")
+        Horus.Blueprint.Operator.Equality,   # "equals" or "is"
+        Horus.Blueprint.Operator.Conditional # "if...then"
       ]
 
   ## Architecture
@@ -31,7 +37,6 @@ defmodule Horus.Blueprint.Operator.Registry do
 
   The registry validates operator registrations at compile time:
   - No duplicate operator names
-  - No duplicate expression tags
   - All operators implement the Operator behaviour
 
   Call `validate!/0` during module compilation to catch configuration errors early.
@@ -39,16 +44,14 @@ defmodule Horus.Blueprint.Operator.Registry do
 
   import NimbleParsec
 
-  alias Horus.Blueprint.Operator
-
-  # Registered operators - populated as we migrate them
+  # Registered operators - read from application config at compile time
+  # This allows different operators to be enabled per environment (dev/test/prod)
+  # Configuration is in config/config.exs and can be overridden per environment
+  #
   # Order matters! More specific operators before generic ones:
   # - "exists" / "is required" / "is present" must come before "is"
   # - "is a" must come before "is"
-  @operators [
-    # "exists" (presence check)
-    Operator.Presence
-  ]
+  @operators Application.compile_env(:horus, :blueprint_operators, [])
 
   @doc """
   Returns the list of all registered operators.
