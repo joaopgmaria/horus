@@ -45,7 +45,7 @@ credo: ## Run Credo linter
 dialyzer: ## Run Dialyzer type checker
 	docker-compose run --rm app mix dialyzer
 
-check: format-check credo test dialyzer ## Run all pre-commit checks
+check: format-check credo test dialyzer deps-audit  ## Run all pre-commit checks
 
 db-setup: ## Setup database
 	docker-compose run --rm app mix ecto.setup
@@ -68,3 +68,6 @@ deps-get: ## Install dependencies
 
 deps-update: ## Update dependencies
 	docker-compose run --rm app mix deps.update --all
+
+deps-audit: ## Audit dependencies for vulnerabilities
+	docker-compose run --rm app mix deps.audit
