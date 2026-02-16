@@ -99,4 +99,36 @@ defmodule Horus.Blueprint.Operator do
       end
   """
   @callback tokens_to_ast(tokens :: list()) :: Horus.Blueprint.AST.Expression.t()
+
+  @doc """
+  Returns alternative phrasings for this operator (optional).
+
+  Operators can define alternative complete forms that are semantically equivalent
+  to their main form. These aliases make the DSL more natural and flexible.
+
+  Returns a list of complete operator phrases that should parse to the same AST.
+
+  ## Examples
+
+      # Required operator with aliases
+      def operator_aliases do
+        [
+          "must be filled in",
+          "must be present"
+        ]
+      end
+
+      # Operator with no aliases
+      def operator_aliases, do: []
+
+  ## Notes
+
+  - Aliases should be complete operator phrases (e.g., "must be filled in", not just "filled in")
+  - All aliases compile to the same operator AST
+  - The main form is defined by parser_combinator/1, aliases are additional alternatives
+  - Global modal substitutions ("is" → "must be"/"should be") are handled automatically by Context
+  """
+  @callback operator_aliases() :: [String.t()]
+
+  @optional_callbacks operator_aliases: 0
 end

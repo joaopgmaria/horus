@@ -32,6 +32,13 @@ defmodule Horus.Blueprint.Parser do
     TypeExpression
   }
 
+  alias Horus.Blueprint.Operator.Registry
+  alias Horus.Blueprint.Parser.Context
+
+  # Build parser context at compile time
+  @parser_context Context.build()
+  Registry.validate!()
+
   # Whitespace (one or more spaces/tabs)
   whitespace = ascii_string([?\s, ?\t], min: 1)
   optional_whitespace = ascii_string([?\s, ?\t], min: 0)
@@ -56,15 +63,11 @@ defmodule Horus.Blueprint.Parser do
     ])
     |> unwrap_and_tag(:type)
 
-  # Operators
-  # Note: Order matters! Check "is required" and "is a" before standalone "is"
-  op_is_required =
-    string("is")
-    |> ignore(whitespace)
-    |> string("required")
-    |> replace(:required)
-    |> unwrap_and_tag(:operator)
+  # Operators from Registry (migrated operators)
+  registry_operators = Registry.build_combinator(@parser_context)
 
+  # Operators not yet migrated to Registry
+  # Note: Order matters! Check "is a" before standalone "is"
   op_is_a =
     string("is")
     |> ignore(whitespace)
@@ -87,13 +90,6 @@ defmodule Horus.Blueprint.Parser do
     |> concat(type_name)
     |> tag(:type_check)
 
-  # Required check: ${field} is required
-  required_expr =
-    placeholder
-    |> ignore(whitespace)
-    |> concat(op_is_required)
-    |> tag(:required_check)
-
   # Equality check: ${field} equals ${value} OR ${field} is ${value}
   equality_expr =
     placeholder
@@ -104,7 +100,9 @@ defmodule Horus.Blueprint.Parser do
     |> tag(:equality_check)
 
   # Comparison expression (any of the above)
-  comparison_expr = choice([type_check_expr, required_expr, equality_expr])
+  # Try Registry operators first (includes migrated Required with all its forms),
+  # then fall back to old inline operators (IsA, Equals) not yet migrated
+  comparison_expr = choice([registry_operators, type_check_expr, equality_expr])
 
   # Conditional expression: if <condition> then <then_expr>
   conditional_expr =
@@ -217,12 +215,9 @@ defmodule Horus.Blueprint.Parser do
     }
   end
 
-  defp tokens_to_ast([{:required_check, [{:placeholder, field}, {:operator, :required}]}]) do
-    %ComparisonExpression{
-      operator: :required,
-      left: %FieldExpression{path: "${#{field}}", placeholder?: true},
-      right: nil
-    }
+  defp tokens_to_ast([{:required_check, _} | _] = tokens) do
+    # Delegate to Registry for migrated operators
+    Registry.tokens_to_ast(tokens)
   end
 
   defp tokens_to_ast([

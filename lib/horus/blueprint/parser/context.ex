@@ -24,6 +24,7 @@ defmodule Horus.Blueprint.Parser.Context do
   - `whitespace` - Required whitespace (1+ spaces/tabs)
   - `optional_whitespace` - Optional whitespace
   - `type_name` - Parses type names (string, integer, number, boolean, array, object)
+  - `modal_verb` - Parses modal verbs (is, must be, should be) - all equivalent
   """
 
   import NimbleParsec
@@ -38,7 +39,7 @@ defmodule Horus.Blueprint.Parser.Context do
 
       iex> ctx = Context.build()
       iex> Map.keys(ctx)
-      [:placeholder, :whitespace, :optional_whitespace, :type_name]
+      [:placeholder, :whitespace, :optional_whitespace, :type_name, :modal_verb]
   """
   @spec build() :: map()
   def build do
@@ -46,7 +47,8 @@ defmodule Horus.Blueprint.Parser.Context do
       placeholder: placeholder(),
       whitespace: whitespace(),
       optional_whitespace: optional_whitespace(),
-      type_name: type_name()
+      type_name: type_name(),
+      modal_verb: modal_verb()
     }
   end
 
@@ -82,5 +84,15 @@ defmodule Horus.Blueprint.Parser.Context do
       string("object") |> replace(:object)
     ])
     |> unwrap_and_tag(:type)
+  end
+
+  # Modal verbs: "is", "must be", "should be" (all equivalent)
+  # Global DSL convention - these forms are interchangeable for all operators
+  defp modal_verb do
+    choice([
+      string("must") |> ignore(whitespace()) |> string("be"),
+      string("should") |> ignore(whitespace()) |> string("be"),
+      string("is")
+    ])
   end
 end

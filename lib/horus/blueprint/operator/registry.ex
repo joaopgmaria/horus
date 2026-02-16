@@ -80,7 +80,12 @@ defmodule Horus.Blueprint.Operator.Registry do
         # No operators registered yet - return a failing combinator
         empty()
 
+      [single_operator] ->
+        # Single operator - return its combinator directly (choice requires 2+ alternatives)
+        single_operator.parser_combinator(context)
+
       operators ->
+        # Multiple operators - wrap in choice
         operators
         |> Enum.map(& &1.parser_combinator(context))
         |> choice()

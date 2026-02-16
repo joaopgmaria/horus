@@ -4,7 +4,14 @@ defmodule Horus.Blueprint.Operator.Required do
 
   ## Syntax
 
+  Main forms (with modal verbs):
       ${field} is required
+      ${field} must be required
+      ${field} should be required
+
+  Alternative forms:
+      ${field} must be filled in
+      ${field} must be present
 
   ## Description
 
@@ -48,17 +55,57 @@ defmodule Horus.Blueprint.Operator.Required do
   def expression_tag, do: :required_check
 
   @impl true
+  def operator_aliases do
+    [
+      "must be filled in",
+      "must be present"
+    ]
+  end
+
+  @impl true
   def parser_combinator(ctx) do
-    # Pattern: ${field} is required
-    # Note: Must check "is required" before standalone "is" (precedence)
-    ctx.placeholder
-    |> ignore(ctx.whitespace)
-    |> string("is")
-    |> ignore(ctx.whitespace)
-    |> string("required")
-    |> replace(:required)
-    |> unwrap_and_tag(:operator)
-    |> tag(:required_check)
+    # Pattern: ${field} (is|must be|should be) required
+    #          ${field} must be filled in
+    #          ${field} must be present
+    # Note: Must check all "required" forms before standalone "is" (precedence)
+
+    # All forms compile to the same tokens: [{:required_check, [{:placeholder, field}, {:operator, :required}]}]
+
+    main_form =
+      ctx.placeholder
+      |> ignore(ctx.whitespace)
+      |> ignore(ctx.modal_verb)
+      |> ignore(ctx.whitespace)
+      |> ignore(string("required"))
+      |> concat(empty() |> replace(:required) |> unwrap_and_tag(:operator))
+      |> tag(:required_check)
+
+    filled_in_alias =
+      ctx.placeholder
+      |> ignore(ctx.whitespace)
+      |> ignore(string("must"))
+      |> ignore(ctx.whitespace)
+      |> ignore(string("be"))
+      |> ignore(ctx.whitespace)
+      |> ignore(string("filled"))
+      |> ignore(ctx.whitespace)
+      |> ignore(string("in"))
+      |> concat(empty() |> replace(:required) |> unwrap_and_tag(:operator))
+      |> tag(:required_check)
+
+    present_alias =
+      ctx.placeholder
+      |> ignore(ctx.whitespace)
+      |> ignore(string("must"))
+      |> ignore(ctx.whitespace)
+      |> ignore(string("be"))
+      |> ignore(ctx.whitespace)
+      |> ignore(string("present"))
+      |> concat(empty() |> replace(:required) |> unwrap_and_tag(:operator))
+      |> tag(:required_check)
+
+    # Try aliases first (more specific), then main form
+    choice([filled_in_alias, present_alias, main_form])
   end
 
   @impl true
