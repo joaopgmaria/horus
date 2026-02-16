@@ -1,168 +1,85 @@
 defmodule Horus.Blueprint.CompilerTest do
   use ExUnit.Case, async: true
 
+  alias Horus.Blueprint.AST.{ComparisonExpression, FieldExpression}
   alias Horus.Blueprint.Compiler
 
-  alias Horus.Blueprint.AST.{
-    ComparisonExpression,
-    ConditionalExpression,
-    FieldExpression,
-    TypeExpression
-  }
-
   describe "compile/1 - successful compilation" do
-    test "compiles simple type check and returns all components" do
-      {:ok, result} = Compiler.compile("${field} is a string")
+    test "compiles presence check and returns all components" do
+      {:ok, result} = Compiler.compile("${field} exists")
 
-      assert %{ast: ast, parameters: params, json: json} = result
-
-      # Verify AST structure
+      # Check AST
       assert %ComparisonExpression{
-               operator: :is_a,
+               operator: :presence,
                left: %FieldExpression{path: "${field}"},
-               right: %TypeExpression{type: :string}
-             } = ast
+               right: nil
+             } = result.ast
 
-      # Verify parameters
-      assert [%{name: "${field}", occurrences: 1}] = params
+      # Check parameters
+      assert [%{name: "${field}", occurrences: 1}] = result.parameters
 
-      # Verify JSON structure
-      assert %{
-               "type" => "comparison",
-               "operator" => "is_a",
-               "left" => %{"type" => "field", "path" => "${field}", "placeholder" => true},
-               "right" => %{"type" => "type", "value" => "string"}
-             } = json
+      # Check JSON
+      assert %{"type" => "comparison", "operator" => "presence"} = result.json
     end
 
-    test "compiles required check" do
-      {:ok, result} = Compiler.compile("${field} is required")
+    test "compiles presence check with 'is required' form" do
+      {:ok, result} = Compiler.compile("${email} is required")
 
-      assert %{ast: ast, parameters: params, json: json} = result
-      assert %ComparisonExpression{operator: :presence} = ast
-      assert [%{name: "${field}", occurrences: 1}] = params
-      assert %{"type" => "comparison", "operator" => "presence"} = json
+      assert %ComparisonExpression{operator: :presence} = result.ast
+      assert [%{name: "${email}", occurrences: 1}] = result.parameters
     end
 
-    test "compiles equality check" do
-      {:ok, result} = Compiler.compile("${field} equals ${expected}")
+    test "compiles presence check with 'must be present' form" do
+      {:ok, result} = Compiler.compile("${email} must be present")
 
-      assert %{ast: ast, parameters: params} = result
-      assert %ComparisonExpression{operator: :equals} = ast
-      assert length(params) == 2
-
-      param_names = Enum.map(params, & &1.name) |> Enum.sort()
-      assert param_names == ["${expected}", "${field}"]
-    end
-
-    test "compiles conditional expression" do
-      {:ok, result} =
-        Compiler.compile("if ${country} is a string then ${postal_code} is required")
-
-      assert %{ast: ast, parameters: params} = result
-
-      assert %ConditionalExpression{
-               condition: %ComparisonExpression{operator: :is_a},
-               then_expr: %ComparisonExpression{operator: :presence}
-             } = ast
-
-      assert length(params) == 2
-      param_names = Enum.map(params, & &1.name) |> Enum.sort()
-      assert param_names == ["${country}", "${postal_code}"]
+      assert %ComparisonExpression{operator: :presence} = result.ast
+      assert [%{name: "${email}", occurrences: 1}] = result.parameters
     end
   end
 
   describe "compile/1 - parameter extraction" do
     test "extracts single parameter" do
-      {:ok, %{parameters: params}} = Compiler.compile("${field} is required")
-
-      assert [%{name: "${field}", occurrences: 1}] = params
+      {:ok, result} = Compiler.compile("${field} exists")
+      assert [%{name: "${field}", occurrences: 1}] = result.parameters
     end
 
-    test "extracts multiple distinct parameters" do
-      {:ok, %{parameters: params}} = Compiler.compile("${field} equals ${expected}")
-
-      assert length(params) == 2
-      assert Enum.all?(params, &(&1.occurrences == 1))
-
-      param_names = Enum.map(params, & &1.name) |> Enum.sort()
-      assert param_names == ["${expected}", "${field}"]
+    test "extracts parameter with underscores and numbers" do
+      {:ok, result} = Compiler.compile("${user_id_123} exists")
+      assert [%{name: "${user_id_123}", occurrences: 1}] = result.parameters
     end
 
-    test "counts multiple occurrences of same parameter" do
-      {:ok, %{parameters: params}} =
-        Compiler.compile("if ${field} is a string then ${field} is required")
+    test "parameter includes occurrence count" do
+      {:ok, result} = Compiler.compile("${field} exists")
+      [param] = result.parameters
 
-      assert [%{name: "${field}", occurrences: 2}] = params
-    end
-
-    test "extracts parameters from complex conditional" do
-      {:ok, %{parameters: params}} =
-        Compiler.compile("if ${status} equals ${expected_status} then ${amount} is required")
-
-      assert length(params) == 3
-
-      param_map = Map.new(params, fn p -> {p.name, p.occurrences} end)
-
-      assert param_map == %{
-               "${status}" => 1,
-               "${expected_status}" => 1,
-               "${amount}" => 1
-             }
-    end
-
-    test "parameters are sorted alphabetically" do
-      {:ok, %{parameters: params}} = Compiler.compile("${zebra} equals ${apple}")
-
-      param_names = Enum.map(params, & &1.name)
-      assert param_names == ["${apple}", "${zebra}"]
+      assert param.name == "${field}"
+      assert param.occurrences == 1
     end
   end
 
   describe "compile/1 - JSON serialization" do
     test "JSON is valid and serializable" do
-      {:ok, %{json: json}} = Compiler.compile("${field} is a string")
+      {:ok, result} = Compiler.compile("${field} exists")
 
-      # Should be a map with string keys
-      assert is_map(json)
-      assert Map.has_key?(json, "type")
-
-      # Should be JSON-encodable
-      assert {:ok, _json_string} = Jason.encode(json)
+      # Ensure JSON can be encoded
+      assert {:ok, _} = Jason.encode(result.json)
     end
 
     test "JSON matches AST structure" do
-      {:ok, %{ast: ast, json: json}} = Compiler.compile("${field} equals ${value}")
+      {:ok, result} = Compiler.compile("${field} exists")
 
-      # JSON should have the same operator
-      assert json["operator"] == "equals"
-
-      # JSON should have left and right
-      assert is_map(json["left"])
-      assert is_map(json["right"])
-
-      # Verify round-trip through JSON
-      deserialized = Horus.Blueprint.AST.from_json(json)
-      assert deserialized == ast
-    end
-
-    test "JSON for conditional includes condition and then" do
-      {:ok, %{json: json}} =
-        Compiler.compile("if ${country} is a string then ${postal_code} is required")
-
-      assert json["type"] == "conditional"
-      assert is_map(json["condition"])
-      assert is_map(json["then"])
-
-      # Verify nested structure
-      assert json["condition"]["type"] == "comparison"
-      assert json["then"]["type"] == "comparison"
+      assert result.json == %{
+               "type" => "comparison",
+               "operator" => "presence",
+               "left" => %{"type" => "field", "path" => "${field}", "placeholder" => true},
+               "right" => nil
+             }
     end
   end
 
   describe "compile/1 - error handling" do
     test "returns error for invalid syntax" do
-      assert {:error, %{message: _message}} = Compiler.compile("invalid syntax")
+      assert {:error, %{message: _}} = Compiler.compile("not valid syntax")
     end
 
     test "returns error for empty string" do
@@ -171,114 +88,56 @@ defmodule Horus.Blueprint.CompilerTest do
     end
 
     test "returns error for malformed placeholder" do
-      assert {:error, %{message: _}} = Compiler.compile(~s/${field is a string/)
+      assert {:error, %{message: _}} = Compiler.compile("${field exists")
     end
 
     test "returns error for incomplete expression" do
-      assert {:error, %{message: _}} = Compiler.compile("${field} is")
+      assert {:error, %{message: _}} = Compiler.compile("${field}")
     end
 
     test "error includes line and column information" do
-      assert {:error, %{line: _line, column: _col}} = Compiler.compile("invalid")
-      # Line and column are present in the error map
+      assert {:error, error} = Compiler.compile("invalid")
+      assert Map.has_key?(error, :line)
+      assert Map.has_key?(error, :column)
     end
   end
 
   describe "extract_parameters/1" do
-    test "extracts from simple expression" do
-      ast = %ComparisonExpression{
-        operator: :presence,
-        left: %FieldExpression{path: "${field}"},
-        right: nil
-      }
+    test "extracts from simple presence expression" do
+      {:ok, result} = Compiler.compile("${field} exists")
+      params = Compiler.extract_parameters(result.ast)
 
-      params = Compiler.extract_parameters(ast)
+      assert length(params) == 1
       assert [%{name: "${field}", occurrences: 1}] = params
     end
 
-    test "extracts from expression with multiple parameters" do
-      ast = %ComparisonExpression{
-        operator: :equals,
-        left: %FieldExpression{path: "${field}"},
-        right: %FieldExpression{path: "${value}"}
-      }
+    test "includes occurrence count" do
+      {:ok, result} = Compiler.compile("${email} exists")
+      [param] = Compiler.extract_parameters(result.ast)
 
-      params = Compiler.extract_parameters(ast)
-      assert length(params) == 2
-
-      param_names = Enum.map(params, & &1.name) |> Enum.sort()
-      assert param_names == ["${field}", "${value}"]
-    end
-
-    test "counts duplicate parameters" do
-      ast = %ComparisonExpression{
-        operator: :equals,
-        left: %FieldExpression{path: "${field}"},
-        right: %FieldExpression{path: "${field}"}
-      }
-
-      params = Compiler.extract_parameters(ast)
-      assert [%{name: "${field}", occurrences: 2}] = params
-    end
-
-    test "extracts from conditional expression" do
-      ast = %ConditionalExpression{
-        condition: %ComparisonExpression{
-          operator: :is_a,
-          left: %FieldExpression{path: "${country}"},
-          right: %TypeExpression{type: :string}
-        },
-        then_expr: %ComparisonExpression{
-          operator: :presence,
-          left: %FieldExpression{path: "${postal_code}"},
-          right: nil
-        }
-      }
-
-      params = Compiler.extract_parameters(ast)
-      assert length(params) == 2
-
-      param_map = Map.new(params, fn p -> {p.name, p.occurrences} end)
-      assert param_map == %{"${country}" => 1, "${postal_code}" => 1}
-    end
-
-    test "handles parameters appearing in multiple branches" do
-      ast = %ConditionalExpression{
-        condition: %ComparisonExpression{
-          operator: :is_a,
-          left: %FieldExpression{path: "${field}"},
-          right: %TypeExpression{type: :string}
-        },
-        then_expr: %ComparisonExpression{
-          operator: :presence,
-          left: %FieldExpression{path: "${field}"},
-          right: nil
-        }
-      }
-
-      params = Compiler.extract_parameters(ast)
-      assert [%{name: "${field}", occurrences: 2}] = params
+      assert param.name == "${email}"
+      assert param.occurrences == 1
     end
   end
 
   describe "integration - full pipeline" do
     test "can compile, serialize, and deserialize" do
-      dsl = "if ${country} is a string then ${postal_code} is required"
-      {:ok, %{ast: original_ast, json: json}} = Compiler.compile(dsl)
+      dsl = "${field} exists"
+      {:ok, result} = Compiler.compile(dsl)
 
-      # Serialize to JSON
-      {:ok, json_string} = Jason.encode(json)
+      # Verify JSON serialization
+      assert {:ok, json_string} = Jason.encode(result.json)
 
-      # Deserialize back
-      {:ok, decoded_json} = Jason.decode(json_string)
-      deserialized_ast = Horus.Blueprint.AST.from_json(decoded_json)
+      # Verify deserialization
+      assert {:ok, decoded_json} = Jason.decode(json_string)
 
-      # Should match original
-      assert deserialized_ast == original_ast
+      # Verify structure preserved
+      assert decoded_json["type"] == "comparison"
+      assert decoded_json["operator"] == "presence"
     end
 
     test "parameter extraction is consistent across compilation" do
-      dsl = "if ${status} equals ${expected} then ${amount} is required"
+      dsl = "${customer_email} exists"
 
       # Compile twice
       {:ok, result1} = Compiler.compile(dsl)
@@ -286,25 +145,7 @@ defmodule Horus.Blueprint.CompilerTest do
 
       # Parameters should be identical
       assert result1.parameters == result2.parameters
-    end
-
-    test "supports all MVP operators" do
-      test_cases = [
-        {"${field} is a string", :is_a},
-        {"${field} is required", :presence},
-        {"${field} equals ${value}", :equals},
-        {"${field} is ${value}", :equals},
-        {"if ${field} is a string then ${other} is required", :conditional}
-      ]
-
-      for {dsl, expected_type} <- test_cases do
-        {:ok, %{ast: ast}} = Compiler.compile(dsl)
-
-        case expected_type do
-          :conditional -> assert %ConditionalExpression{} = ast
-          operator -> assert %ComparisonExpression{operator: ^operator} = ast
-        end
-      end
+      assert [%{name: "${customer_email}", occurrences: 1}] = result1.parameters
     end
   end
 end

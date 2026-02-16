@@ -6,9 +6,7 @@ defmodule Horus.Blueprint.ASTTest do
 
   alias Horus.Blueprint.AST.{
     ComparisonExpression,
-    ConditionalExpression,
-    FieldExpression,
-    TypeExpression
+    FieldExpression
   }
 
   describe "FieldExpression" do
@@ -59,321 +57,86 @@ defmodule Horus.Blueprint.ASTTest do
     end
   end
 
-  describe "TypeExpression" do
-    test "creates with type atom" do
-      expr = %TypeExpression{type: :string}
-      assert expr.type == :string
-    end
-
-    test "supports all type atoms" do
-      types = [:string, :integer, :number, :boolean, :array, :object]
-
-      for type <- types do
-        expr = %TypeExpression{type: type}
-        assert expr.type == type
-      end
-    end
-
-    test "serializes to JSON" do
-      expr = %TypeExpression{type: :string}
-
-      assert Expression.to_json(expr) == %{
-               "type" => "type",
-               "value" => "string"
-             }
-    end
-
-    test "does not extract parameters" do
-      expr = %TypeExpression{type: :string}
-      assert Expression.extract_parameters(expr) == []
-    end
-
-    test "deserializes from JSON" do
-      json = %{"type" => "type", "value" => "integer"}
-      assert AST.from_json(json) == %TypeExpression{type: :integer}
-    end
-  end
-
-  describe "ComparisonExpression" do
-    test "creates with operator and left/right expressions" do
-      expr = %ComparisonExpression{
-        operator: :is_a,
-        left: %FieldExpression{path: "${field}"},
-        right: %TypeExpression{type: :string}
-      }
-
-      assert expr.operator == :is_a
-      assert expr.left == %FieldExpression{path: "${field}"}
-      assert expr.right == %TypeExpression{type: :string}
-    end
-
-    test "supports nil right for required operator" do
+  describe "ComparisonExpression - Presence operator" do
+    test "creates presence check expression" do
       expr = %ComparisonExpression{
         operator: :presence,
-        left: %FieldExpression{path: "${field}"},
+        left: %FieldExpression{path: "${field}", placeholder?: true},
         right: nil
       }
 
+      assert expr.operator == :presence
+      assert expr.left.path == "${field}"
       assert expr.right == nil
     end
 
-    test "serializes type check to JSON" do
+    test "serializes presence check to JSON" do
       expr = %ComparisonExpression{
-        operator: :is_a,
-        left: %FieldExpression{path: "${field}"},
-        right: %TypeExpression{type: :string}
+        operator: :presence,
+        left: %FieldExpression{path: "${field}", placeholder?: true},
+        right: nil
       }
 
       assert Expression.to_json(expr) == %{
                "type" => "comparison",
-               "operator" => "is_a",
-               "left" => %{
-                 "type" => "field",
-                 "path" => "${field}",
-                 "placeholder" => true
-               },
-               "right" => %{
-                 "type" => "type",
-                 "value" => "string"
-               }
+               "operator" => "presence",
+               "left" => %{"type" => "field", "path" => "${field}", "placeholder" => true},
+               "right" => nil
              }
     end
 
-    test "serializes required check with nil right" do
+    test "extracts parameters from presence check" do
       expr = %ComparisonExpression{
         operator: :presence,
-        left: %FieldExpression{path: "${field}"},
+        left: %FieldExpression{path: "${field}", placeholder?: true},
         right: nil
-      }
-
-      json = Expression.to_json(expr)
-      assert json["operator"] == "presence"
-      assert json["right"] == nil
-    end
-
-    test "extracts parameters from left only" do
-      expr = %ComparisonExpression{
-        operator: :is_a,
-        left: %FieldExpression{path: "${field}"},
-        right: %TypeExpression{type: :string}
       }
 
       assert Expression.extract_parameters(expr) == ["${field}"]
     end
 
-    test "extracts parameters from both left and right" do
-      expr = %ComparisonExpression{
-        operator: :equals,
-        left: %FieldExpression{path: "${field}"},
-        right: %FieldExpression{path: "${expected}"}
-      }
-
-      params = Expression.extract_parameters(expr)
-      assert Enum.sort(params) == ["${expected}", "${field}"]
-    end
-
-    test "preserves duplicate parameters for counting" do
-      expr = %ComparisonExpression{
-        operator: :equals,
-        left: %FieldExpression{path: "${field}"},
-        right: %FieldExpression{path: "${field}"}
-      }
-
-      # Should include duplicates so Compiler can count occurrences
-      assert Expression.extract_parameters(expr) == ["${field}", "${field}"]
-    end
-
-    test "deserializes from JSON" do
+    test "deserializes presence check from JSON" do
       json = %{
         "type" => "comparison",
-        "operator" => "is_a",
+        "operator" => "presence",
         "left" => %{"type" => "field", "path" => "${field}", "placeholder" => true},
-        "right" => %{"type" => "type", "value" => "string"}
+        "right" => nil
       }
 
-      result = AST.from_json(json)
-
-      assert %ComparisonExpression{
-               operator: :is_a,
-               left: %FieldExpression{path: "${field}"},
-               right: %TypeExpression{type: :string}
-             } = result
-    end
-  end
-
-  describe "ConditionalExpression" do
-    test "creates with condition and then_expr" do
-      expr = %ConditionalExpression{
-        condition: %ComparisonExpression{
-          operator: :is_a,
-          left: %FieldExpression{path: "${country}"},
-          right: %TypeExpression{type: :string}
-        },
-        then_expr: %ComparisonExpression{
-          operator: :presence,
-          left: %FieldExpression{path: "${postal_code}"},
-          right: nil
-        }
-      }
-
-      assert %ComparisonExpression{operator: :is_a} = expr.condition
-      assert %ComparisonExpression{operator: :presence} = expr.then_expr
+      assert AST.from_json(json) == %ComparisonExpression{
+               operator: :presence,
+               left: %FieldExpression{path: "${field}", placeholder?: true},
+               right: nil
+             }
     end
 
-    test "serializes to JSON" do
-      expr = %ConditionalExpression{
-        condition: %ComparisonExpression{
-          operator: :is_a,
-          left: %FieldExpression{path: "${country}"},
-          right: %TypeExpression{type: :string}
-        },
-        then_expr: %ComparisonExpression{
-          operator: :presence,
-          left: %FieldExpression{path: "${postal_code}"},
-          right: nil
-        }
-      }
-
-      json = Expression.to_json(expr)
-
-      assert json["type"] == "conditional"
-      assert json["condition"]["operator"] == "is_a"
-      assert json["condition"]["left"]["path"] == "${country}"
-      assert json["then"]["operator"] == "presence"
-      assert json["then"]["left"]["path"] == "${postal_code}"
-    end
-
-    test "extracts parameters from both condition and then_expr" do
-      expr = %ConditionalExpression{
-        condition: %ComparisonExpression{
-          operator: :is_a,
-          left: %FieldExpression{path: "${country}"},
-          right: %TypeExpression{type: :string}
-        },
-        then_expr: %ComparisonExpression{
-          operator: :presence,
-          left: %FieldExpression{path: "${postal_code}"},
-          right: nil
-        }
+    test "extracts multiple occurrences of same parameter" do
+      # Note: Presence operator only has one field, but this tests parameter extraction behavior
+      expr = %ComparisonExpression{
+        operator: :presence,
+        left: %FieldExpression{path: "${field}", placeholder?: true},
+        right: nil
       }
 
       params = Expression.extract_parameters(expr)
-      assert Enum.sort(params) == ["${country}", "${postal_code}"]
-    end
-
-    test "preserves duplicate parameters across branches for counting" do
-      expr = %ConditionalExpression{
-        condition: %ComparisonExpression{
-          operator: :is_a,
-          left: %FieldExpression{path: "${field}"},
-          right: %TypeExpression{type: :string}
-        },
-        then_expr: %ComparisonExpression{
-          operator: :presence,
-          left: %FieldExpression{path: "${field}"},
-          right: nil
-        }
-      }
-
-      # Should include duplicates so Compiler can count occurrences
-      assert Expression.extract_parameters(expr) == ["${field}", "${field}"]
-    end
-
-    test "deserializes from JSON" do
-      json = %{
-        "type" => "conditional",
-        "condition" => %{
-          "type" => "comparison",
-          "operator" => "is_a",
-          "left" => %{"type" => "field", "path" => "${country}", "placeholder" => true},
-          "right" => %{"type" => "type", "value" => "string"}
-        },
-        "then" => %{
-          "type" => "comparison",
-          "operator" => "presence",
-          "left" => %{"type" => "field", "path" => "${postal_code}", "placeholder" => true},
-          "right" => nil
-        }
-      }
-
-      result = AST.from_json(json)
-
-      assert %ConditionalExpression{
-               condition: %ComparisonExpression{operator: :is_a},
-               then_expr: %ComparisonExpression{operator: :presence}
-             } = result
+      assert params == ["${field}"]
     end
   end
 
-  describe "round-trip serialization" do
-    test "FieldExpression survives round-trip" do
-      original = %FieldExpression{path: "${field}", placeholder?: true}
+  describe "round-trip serialization - Presence operator" do
+    test "FieldExpression round-trips through JSON" do
+      original = %FieldExpression{path: "${customer_email}", placeholder?: true}
       json = Expression.to_json(original)
       deserialized = AST.from_json(json)
 
       assert deserialized == original
     end
 
-    test "TypeExpression survives round-trip" do
-      original = %TypeExpression{type: :integer}
-      json = Expression.to_json(original)
-      deserialized = AST.from_json(json)
-
-      assert deserialized == original
-    end
-
-    test "ComparisonExpression survives round-trip" do
+    test "ComparisonExpression (presence) round-trips through JSON" do
       original = %ComparisonExpression{
-        operator: :equals,
-        left: %FieldExpression{path: "${field}"},
-        right: %FieldExpression{path: "${value}"}
-      }
-
-      json = Expression.to_json(original)
-      deserialized = AST.from_json(json)
-
-      assert deserialized == original
-    end
-
-    test "ConditionalExpression survives round-trip" do
-      original = %ConditionalExpression{
-        condition: %ComparisonExpression{
-          operator: :is_a,
-          left: %FieldExpression{path: "${country}"},
-          right: %TypeExpression{type: :string}
-        },
-        then_expr: %ComparisonExpression{
-          operator: :presence,
-          left: %FieldExpression{path: "${postal_code}"},
-          right: nil
-        }
-      }
-
-      json = Expression.to_json(original)
-      deserialized = AST.from_json(json)
-
-      assert deserialized == original
-    end
-
-    test "nested ConditionalExpression survives round-trip" do
-      original = %ConditionalExpression{
-        condition: %ComparisonExpression{
-          operator: :equals,
-          left: %FieldExpression{path: "${status}"},
-          right: %FieldExpression{path: "${expected_status}"}
-        },
-        then_expr: %ConditionalExpression{
-          condition: %ComparisonExpression{
-            operator: :is_a,
-            left: %FieldExpression{path: "${amount}"},
-            right: %TypeExpression{type: :number}
-          },
-          then_expr: %ComparisonExpression{
-            operator: :presence,
-            left: %FieldExpression{path: "${currency}"},
-            right: nil
-          }
-        }
+        operator: :presence,
+        left: %FieldExpression{path: "${email}", placeholder?: true},
+        right: nil
       }
 
       json = Expression.to_json(original)

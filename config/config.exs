@@ -45,8 +45,8 @@ config :phoenix, :json_library, Jason
 config :horus, :blueprint_operators, [
   Horus.Blueprint.Operator.Presence
   # Add more operators here as they are implemented:
-  # Horus.Blueprint.Operator.IsA,
-  # Horus.Blueprint.Operator.Equals,
+  # Horus.Blueprint.Operator.TypeCheck,
+  # Horus.Blueprint.Operator.Equality,
   # Horus.Blueprint.Operator.Conditional
 ]
 

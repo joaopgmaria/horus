@@ -1,6 +1,6 @@
 defmodule Horus.Blueprint.Operator.Presence do
   @moduledoc """
-  "exists" operator - checks field presence.
+  "presence" operator - checks field presence.
 
   ## Syntax
 
@@ -25,18 +25,15 @@ defmodule Horus.Blueprint.Operator.Presence do
       # Require email field
       "${email} exists"
 
-      # Nested field
-      "${customer.address} must be present"
-
-      # Used in conditional
-      "if ${type} equals customer then ${email} is required"
+      # Used in conditionals
+      "if ${customer} exists customer then ${email} is required"
 
   ## AST Output
 
-  Produces a ComparisonExpression with operator `:exists`:
+  Produces a ComparisonExpression with operator `:presence`:
 
       %ComparisonExpression{
-        operator: :exists,
+        operator: :presence,
         left: %FieldExpression{path: "${field}", placeholder?: true},
         right: nil
       }

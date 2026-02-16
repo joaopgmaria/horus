@@ -94,7 +94,7 @@ defmodule Horus.Blueprint.Operator.Registry do
   @doc """
   Converts parsed tokens to an AST expression.
 
-  Dispatches tokens to the appropriate operator based on the expression tag.
+  Dispatches tokens to the appropriate operator based on the name.
   Raises an error if no operator matches the token structure.
 
   ## Examples
