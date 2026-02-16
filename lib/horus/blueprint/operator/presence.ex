@@ -1,0 +1,79 @@
+defmodule Horus.Blueprint.Operator.Presence do
+  @moduledoc """
+  "exists" operator - checks field presence.
+
+  ## Syntax
+
+  All supported operator forms:
+      ${field} exists
+      ${field} must exist
+      ${field} should exist
+      ${field} is required
+      ${field} is present
+      ${field} must be present
+      ${field} should be present
+      ${field} must be filled in
+      ${field} should be filled in
+
+  ## Description
+
+  Validates that a field exists and is not null. This is typically used
+  to enforce mandatory fields in a payload.
+
+  ## Examples
+
+      # Require email field
+      "${email} exists"
+
+      # Nested field
+      "${customer.address} must be present"
+
+      # Used in conditional
+      "if ${type} equals customer then ${email} is required"
+
+  ## AST Output
+
+  Produces a ComparisonExpression with operator `:exists`:
+
+      %ComparisonExpression{
+        operator: :exists,
+        left: %FieldExpression{path: "${field}", placeholder?: true},
+        right: nil
+      }
+
+  The `right` side is `nil` because presence checks don't compare against a value.
+  """
+
+  use Horus.Blueprint.Operator
+
+  alias Horus.Blueprint.AST.{ComparisonExpression, FieldExpression}
+
+  @impl true
+  def operator_name, do: :presence
+
+  @impl true
+  def operator_forms do
+    [
+      "exists",
+      "must exist",
+      "should exist",
+      "is required",
+      "is present",
+      "must be present",
+      "should be present",
+      "must be filled in",
+      "should be filled in"
+    ]
+  end
+
+  # Note: parser_combinator/1 is provided by `use Horus.Blueprint.Operator`
+
+  @impl true
+  def tokens_to_ast([{:presence, [{:placeholder, field}, {:operator, :presence}]}]) do
+    %ComparisonExpression{
+      operator: :presence,
+      left: %FieldExpression{path: "${#{field}}", placeholder?: true},
+      right: nil
+    }
+  end
+end

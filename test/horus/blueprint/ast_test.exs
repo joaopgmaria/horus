@@ -109,7 +109,7 @@ defmodule Horus.Blueprint.ASTTest do
 
     test "supports nil right for required operator" do
       expr = %ComparisonExpression{
-        operator: :required,
+        operator: :presence,
         left: %FieldExpression{path: "${field}"},
         right: nil
       }
@@ -141,13 +141,13 @@ defmodule Horus.Blueprint.ASTTest do
 
     test "serializes required check with nil right" do
       expr = %ComparisonExpression{
-        operator: :required,
+        operator: :presence,
         left: %FieldExpression{path: "${field}"},
         right: nil
       }
 
       json = Expression.to_json(expr)
-      assert json["operator"] == "required"
+      assert json["operator"] == "presence"
       assert json["right"] == nil
     end
 
@@ -210,14 +210,14 @@ defmodule Horus.Blueprint.ASTTest do
           right: %TypeExpression{type: :string}
         },
         then_expr: %ComparisonExpression{
-          operator: :required,
+          operator: :presence,
           left: %FieldExpression{path: "${postal_code}"},
           right: nil
         }
       }
 
       assert %ComparisonExpression{operator: :is_a} = expr.condition
-      assert %ComparisonExpression{operator: :required} = expr.then_expr
+      assert %ComparisonExpression{operator: :presence} = expr.then_expr
     end
 
     test "serializes to JSON" do
@@ -228,7 +228,7 @@ defmodule Horus.Blueprint.ASTTest do
           right: %TypeExpression{type: :string}
         },
         then_expr: %ComparisonExpression{
-          operator: :required,
+          operator: :presence,
           left: %FieldExpression{path: "${postal_code}"},
           right: nil
         }
@@ -239,7 +239,7 @@ defmodule Horus.Blueprint.ASTTest do
       assert json["type"] == "conditional"
       assert json["condition"]["operator"] == "is_a"
       assert json["condition"]["left"]["path"] == "${country}"
-      assert json["then"]["operator"] == "required"
+      assert json["then"]["operator"] == "presence"
       assert json["then"]["left"]["path"] == "${postal_code}"
     end
 
@@ -251,7 +251,7 @@ defmodule Horus.Blueprint.ASTTest do
           right: %TypeExpression{type: :string}
         },
         then_expr: %ComparisonExpression{
-          operator: :required,
+          operator: :presence,
           left: %FieldExpression{path: "${postal_code}"},
           right: nil
         }
@@ -269,7 +269,7 @@ defmodule Horus.Blueprint.ASTTest do
           right: %TypeExpression{type: :string}
         },
         then_expr: %ComparisonExpression{
-          operator: :required,
+          operator: :presence,
           left: %FieldExpression{path: "${field}"},
           right: nil
         }
@@ -290,7 +290,7 @@ defmodule Horus.Blueprint.ASTTest do
         },
         "then" => %{
           "type" => "comparison",
-          "operator" => "required",
+          "operator" => "presence",
           "left" => %{"type" => "field", "path" => "${postal_code}", "placeholder" => true},
           "right" => nil
         }
@@ -300,7 +300,7 @@ defmodule Horus.Blueprint.ASTTest do
 
       assert %ConditionalExpression{
                condition: %ComparisonExpression{operator: :is_a},
-               then_expr: %ComparisonExpression{operator: :required}
+               then_expr: %ComparisonExpression{operator: :presence}
              } = result
     end
   end
@@ -343,7 +343,7 @@ defmodule Horus.Blueprint.ASTTest do
           right: %TypeExpression{type: :string}
         },
         then_expr: %ComparisonExpression{
-          operator: :required,
+          operator: :presence,
           left: %FieldExpression{path: "${postal_code}"},
           right: nil
         }
@@ -369,7 +369,7 @@ defmodule Horus.Blueprint.ASTTest do
             right: %TypeExpression{type: :number}
           },
           then_expr: %ComparisonExpression{
-            operator: :required,
+            operator: :presence,
             left: %FieldExpression{path: "${currency}"},
             right: nil
           }

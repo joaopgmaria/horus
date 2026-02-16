@@ -60,7 +60,7 @@ defmodule Horus.Blueprint.ParserTest do
       {:ok, ast} = Parser.parse_dsl("${field} is required")
 
       assert %ComparisonExpression{
-               operator: :required,
+               operator: :presence,
                left: %FieldExpression{path: "${field}", placeholder?: true},
                right: nil
              } = ast
@@ -70,7 +70,7 @@ defmodule Horus.Blueprint.ParserTest do
       {:ok, ast} = Parser.parse_dsl("${customer_email} is required")
 
       assert %ComparisonExpression{
-               operator: :required,
+               operator: :presence,
                left: %FieldExpression{path: "${customer_email}"}
              } = ast
     end
@@ -83,7 +83,7 @@ defmodule Horus.Blueprint.ParserTest do
       ]
 
       for dsl <- variations do
-        assert {:ok, %ComparisonExpression{operator: :required}} = Parser.parse_dsl(dsl)
+        assert {:ok, %ComparisonExpression{operator: :presence}} = Parser.parse_dsl(dsl)
       end
     end
   end
@@ -144,7 +144,7 @@ defmodule Horus.Blueprint.ParserTest do
                  right: %TypeExpression{type: :string}
                },
                then_expr: %ComparisonExpression{
-                 operator: :required,
+                 operator: :presence,
                  left: %FieldExpression{path: "${postal_code}"},
                  right: nil
                }
@@ -162,7 +162,7 @@ defmodule Horus.Blueprint.ParserTest do
                  right: %FieldExpression{path: "${expected_status}"}
                },
                then_expr: %ComparisonExpression{
-                 operator: :required
+                 operator: :presence
                }
              } = ast
     end
@@ -171,7 +171,7 @@ defmodule Horus.Blueprint.ParserTest do
       {:ok, ast} = Parser.parse_dsl("if ${country} is required then ${postal_code} is a string")
 
       assert %ConditionalExpression{
-               condition: %ComparisonExpression{operator: :required},
+               condition: %ComparisonExpression{operator: :presence},
                then_expr: %ComparisonExpression{operator: :is_a}
              } = ast
     end

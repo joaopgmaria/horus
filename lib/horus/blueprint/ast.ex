@@ -191,7 +191,7 @@ defmodule Horus.Blueprint.AST.ComparisonExpression do
 
   - `:is_a` - Type checking: `${field} is a string`
   - `:equals` - Equality: `${field} equals ${value}` or `${field} is ${value}`
-  - `:required` - Presence: `${field} is required` (right is nil)
+  - `:presence` - Presence: `${field} exists` / `${field} is required` (right is nil)
 
   ## Examples
 
@@ -204,7 +204,7 @@ defmodule Horus.Blueprint.AST.ComparisonExpression do
 
       # Presence check
       %ComparisonExpression{
-        operator: :required,
+        operator: :presence,
         left: %FieldExpression{path: "${field}"},
         right: nil
       }
@@ -217,7 +217,7 @@ defmodule Horus.Blueprint.AST.ComparisonExpression do
       }
   """
 
-  @type operator :: :is_a | :equals | :required
+  @type operator :: :is_a | :equals | :presence
 
   @type t :: %__MODULE__{
           operator: operator(),
@@ -280,7 +280,7 @@ defmodule Horus.Blueprint.AST.ConditionalExpression do
           right: %TypeExpression{type: :string}
         },
         then_expr: %ComparisonExpression{
-          operator: :required,
+          operator: :presence,
           left: %FieldExpression{path: "${postal_code}"},
           right: nil
         }

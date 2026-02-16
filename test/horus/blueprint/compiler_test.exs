@@ -39,9 +39,9 @@ defmodule Horus.Blueprint.CompilerTest do
       {:ok, result} = Compiler.compile("${field} is required")
 
       assert %{ast: ast, parameters: params, json: json} = result
-      assert %ComparisonExpression{operator: :required} = ast
+      assert %ComparisonExpression{operator: :presence} = ast
       assert [%{name: "${field}", occurrences: 1}] = params
-      assert %{"type" => "comparison", "operator" => "required"} = json
+      assert %{"type" => "comparison", "operator" => "presence"} = json
     end
 
     test "compiles equality check" do
@@ -63,7 +63,7 @@ defmodule Horus.Blueprint.CompilerTest do
 
       assert %ConditionalExpression{
                condition: %ComparisonExpression{operator: :is_a},
-               then_expr: %ComparisonExpression{operator: :required}
+               then_expr: %ComparisonExpression{operator: :presence}
              } = ast
 
       assert length(params) == 2
@@ -187,7 +187,7 @@ defmodule Horus.Blueprint.CompilerTest do
   describe "extract_parameters/1" do
     test "extracts from simple expression" do
       ast = %ComparisonExpression{
-        operator: :required,
+        operator: :presence,
         left: %FieldExpression{path: "${field}"},
         right: nil
       }
@@ -229,7 +229,7 @@ defmodule Horus.Blueprint.CompilerTest do
           right: %TypeExpression{type: :string}
         },
         then_expr: %ComparisonExpression{
-          operator: :required,
+          operator: :presence,
           left: %FieldExpression{path: "${postal_code}"},
           right: nil
         }
@@ -250,7 +250,7 @@ defmodule Horus.Blueprint.CompilerTest do
           right: %TypeExpression{type: :string}
         },
         then_expr: %ComparisonExpression{
-          operator: :required,
+          operator: :presence,
           left: %FieldExpression{path: "${field}"},
           right: nil
         }
@@ -291,7 +291,7 @@ defmodule Horus.Blueprint.CompilerTest do
     test "supports all MVP operators" do
       test_cases = [
         {"${field} is a string", :is_a},
-        {"${field} is required", :required},
+        {"${field} is required", :presence},
         {"${field} equals ${value}", :equals},
         {"${field} is ${value}", :equals},
         {"if ${field} is a string then ${other} is required", :conditional}

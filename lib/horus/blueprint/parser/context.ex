@@ -92,6 +92,11 @@ defmodule Horus.Blueprint.Parser.Context do
     choice([
       string("must") |> ignore(whitespace()) |> string("be"),
       string("should") |> ignore(whitespace()) |> string("be"),
+      string("has")
+      |> ignore(whitespace())
+      |> string("to")
+      |> ignore(whitespace())
+      |> string("be"),
       string("is")
     ])
   end

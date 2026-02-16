@@ -215,7 +215,7 @@ defmodule Horus.Blueprint.Parser do
     }
   end
 
-  defp tokens_to_ast([{:required_check, _} | _] = tokens) do
+  defp tokens_to_ast([{:presence, _} | _] = tokens) do
     # Delegate to Registry for migrated operators
     Registry.tokens_to_ast(tokens)
   end

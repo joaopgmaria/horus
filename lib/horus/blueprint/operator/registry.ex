@@ -13,7 +13,7 @@ defmodule Horus.Blueprint.Operator.Registry do
 
   Example:
       @operators [
-        Operators.Required,    # "is required" (before "is")
+        Operators.Presence,   # "exists" / "is required" / "is present" (before "is")
         Operators.IsA,        # "is a" (before "is")
         Operators.Equals,     # "equals" or "is"
         Operators.Conditional # "if...then"
@@ -43,11 +43,11 @@ defmodule Horus.Blueprint.Operator.Registry do
 
   # Registered operators - populated as we migrate them
   # Order matters! More specific operators before generic ones:
-  # - "is required" must come before "is"
+  # - "exists" / "is required" / "is present" must come before "is"
   # - "is a" must come before "is"
   @operators [
-    # "is required"
-    Operator.Required
+    # "exists" (presence check)
+    Operator.Presence
   ]
 
   @doc """
@@ -56,7 +56,7 @@ defmodule Horus.Blueprint.Operator.Registry do
   ## Examples
 
       iex> Registry.list_all_operators()
-      [Operators.Required, Operators.IsA, Operators.Equals, Operators.Conditional]
+      [Operators.Presence, Operators.IsA, Operators.Equals, Operators.Conditional]
   """
   @spec list_all_operators() :: [module()]
   def list_all_operators, do: @operators
@@ -76,10 +76,6 @@ defmodule Horus.Blueprint.Operator.Registry do
   @spec build_combinator(context :: map()) :: NimbleParsec.t()
   def build_combinator(context) do
     case @operators do
-      [] ->
-        # No operators registered yet - return a failing combinator
-        empty()
-
       [single_operator] ->
         # Single operator - return its combinator directly (choice requires 2+ alternatives)
         single_operator.parser_combinator(context)
@@ -100,16 +96,12 @@ defmodule Horus.Blueprint.Operator.Registry do
 
   ## Examples
 
-      iex> tokens = [{:required_check, [{:placeholder, "field"}, {:operator, :required}]}]
+      iex> tokens = [{:presence, [{:placeholder, "field"}, {:operator, :presence}]}]
       iex> Registry.tokens_to_ast(tokens)
-      %ComparisonExpression{operator: :required, ...}
+      %ComparisonExpression{operator: :presence, ...}
   """
   @spec tokens_to_ast(tokens :: list()) :: Horus.Blueprint.AST.Expression.t()
   def tokens_to_ast(tokens) do
-    if @operators == [] do
-      raise "No operators registered in Registry"
-    end
-
     find_operator_and_build_ast(@operators, tokens) ||
       raise "Unknown token structure: #{inspect(tokens)}"
   end
@@ -117,10 +109,10 @@ defmodule Horus.Blueprint.Operator.Registry do
   # Private helper to find the matching operator and build AST
   defp find_operator_and_build_ast(operators, tokens) do
     Enum.find_value(operators, fn mod ->
-      tag = mod.expression_tag()
+      name = mod.operator_name()
 
       case tokens do
-        [{^tag, _} | _] -> mod.tokens_to_ast(tokens)
+        [{^name, _} | _] -> mod.tokens_to_ast(tokens)
         _ -> nil
       end
     end)
@@ -131,7 +123,6 @@ defmodule Horus.Blueprint.Operator.Registry do
 
   Checks for:
   - Duplicate operator names
-  - Duplicate expression tags
   - All modules implement the Operator behaviour
 
   Raises a compile-time error if validation fails.
@@ -147,15 +138,9 @@ defmodule Horus.Blueprint.Operator.Registry do
   """
   @spec validate!() :: :ok
   def validate! do
-    # Skip validation if no operators registered yet
-    if @operators == [] do
-      :ok
-    else
-      validate_no_duplicate_names()
-      validate_no_duplicate_tags()
-      validate_all_implement_behaviour()
-      :ok
-    end
+    validate_no_duplicate_names()
+    validate_all_implement_behaviour()
+    :ok
   end
 
   # Private validation functions
@@ -169,20 +154,10 @@ defmodule Horus.Blueprint.Operator.Registry do
     end
   end
 
-  defp validate_no_duplicate_tags do
-    tags = Enum.map(@operators, & &1.expression_tag())
-    duplicates = tags -- Enum.uniq(tags)
-
-    if duplicates != [] do
-      raise "Duplicate expression tags found: #{inspect(duplicates)}"
-    end
-  end
-
   defp validate_all_implement_behaviour do
     @operators
     |> Enum.each(fn mod ->
       unless function_exported?(mod, :operator_name, 0) and
-               function_exported?(mod, :expression_tag, 0) and
                function_exported?(mod, :parser_combinator, 1) and
                function_exported?(mod, :tokens_to_ast, 1) do
         raise "Module #{inspect(mod)} does not implement Horus.Blueprint.Operator behaviour"
