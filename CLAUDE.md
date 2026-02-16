@@ -259,6 +259,158 @@ priv/
 - Validate inputs at boundaries
 - Use Ecto changesets for data validation
 
+## Git Workflow & Development Process
+
+### Branch Strategy
+Every deliverable within a phase gets its own feature branch and pull request.
+
+**Branch Naming Convention**:
+```
+phase-{N}/{deliverable-slug}
+```
+
+**Examples**:
+- `phase-0/database-setup`
+- `phase-0/docker-compose-config`
+- `phase-1/dsl-parser`
+- `phase-1/expression-evaluator`
+- `phase-1/rule-execution-engine`
+- `phase-2/api-authentication`
+- `phase-3/blueprint-management-ui`
+
+### Pull Request Process
+
+1. **Create Feature Branch**:
+   ```bash
+   git checkout -b phase-1/dsl-parser
+   ```
+
+2. **Make Changes**: Implement the deliverable according to Implementation Plan
+
+3. **Pre-commit Checks** (REQUIRED before committing):
+   ```bash
+   # Run tests
+   mix test
+
+   # Run formatter
+   mix format --check-formatted
+
+   # Run linter (Credo)
+   mix credo --strict
+
+   # Run type checker (Dialyzer)
+   mix dialyzer
+   ```
+
+   **All checks must pass before committing**. Fix any issues before proceeding.
+
+4. **Commit Changes**:
+   ```bash
+   git add .
+   git commit -m "Implement DSL parser with NimbleParsec
+
+   - Add expression types (Field, Type, Comparison, Conditional)
+   - Implement MVP operators (is a, is required, equals, if...then)
+   - Add parameter placeholder resolution
+   - Include comprehensive test suite
+
+   Phase 1 Deliverable: Blueprint DSL Parser
+
+   Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"
+   ```
+
+5. **Push to Remote**:
+   ```bash
+   git push -u origin phase-1/dsl-parser
+   ```
+
+6. **Create Pull Request**:
+   - Use GitHub UI or `gh pr create`
+   - Title: `Phase 1: Blueprint DSL Parser`
+   - Description: Link to Implementation Plan deliverable, list changes, note any deviations
+   - Add labels: `phase-1`, `deliverable`, `mvp`
+
+7. **Review & Merge**:
+   - Wait for CI checks (tests, linter, formatter)
+   - Address review comments
+   - Squash and merge to `master` once approved
+
+### Pre-commit Automation (Optional)
+Install git hooks to automatically run checks:
+
+```bash
+# .git/hooks/pre-commit
+#!/bin/sh
+mix test && mix format --check-formatted && mix credo --strict
+```
+
+### CI/CD Pipeline
+GitHub Actions should run on every PR:
+- Run full test suite
+- Check code formatting
+- Run Credo linter
+- Run Dialyzer type checker
+- Build Docker image (if applicable)
+
+**Merge is blocked** if any check fails.
+
+### Commit Message Format
+Follow conventional commit style:
+
+```
+<type>: <short description>
+
+<detailed description>
+
+<deliverable reference>
+
+Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>
+```
+
+**Types**: `feat`, `fix`, `refactor`, `test`, `docs`, `chore`
+
+**Example**:
+```
+feat: add expression-based AST evaluation
+
+- Implement Expression behaviour with evaluate/2 callback
+- Add FieldExpression, TypeExpression, ComparisonExpression
+- Support recursive evaluation with context passing
+- Include comprehensive unit tests
+
+Phase 1 Deliverable: Expression Evaluator
+
+Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>
+```
+
+### Working with Multiple Deliverables
+When working on multiple deliverables in parallel:
+
+1. Each deliverable stays in its own branch
+2. Create PR for each deliverable independently
+3. Merge deliverables in logical order (respect dependencies)
+4. Rebase if needed to resolve conflicts
+
+**Example**:
+```bash
+# Working on two Phase 1 deliverables
+git checkout -b phase-1/dsl-parser
+# ... implement DSL parser ...
+git push origin phase-1/dsl-parser
+# Create PR #1
+
+git checkout master
+git checkout -b phase-1/expression-evaluator
+# ... implement expression evaluator ...
+git push origin phase-1/expression-evaluator
+# Create PR #2
+
+# PR #1 merges first
+# Rebase PR #2 on updated master if needed
+git checkout phase-1/expression-evaluator
+git rebase master
+```
+
 ## Testing Strategy
 - Unit tests for business logic
 - Integration tests for API endpoints
