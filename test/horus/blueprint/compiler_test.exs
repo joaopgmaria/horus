@@ -208,4 +208,42 @@ defmodule Horus.Blueprint.CompilerTest do
                result.ast
     end
   end
+
+  describe "compile/1 - regex match" do
+    alias Horus.Blueprint.AST.Expression.{Comparison, Field, Literal}
+
+    test "compiles regex literal" do
+      {:ok, result} = Compiler.compile("/\\d+/")
+
+      assert %Literal{value: "\\d+", type: :regex} = result.ast
+      assert result.json["type"] == "literal"
+      assert result.json["value"] == "\\d+"
+    end
+
+    test "compiles match operator when using regex" do
+      {:ok, result} = Compiler.compile("${field} matches /\\d+/")
+
+      assert %Comparison{
+               operator: :match,
+               left: %Field{path: "${field}", placeholder?: true},
+               right: %Literal{value: "\\d+", type: :regex}
+             } = result.ast
+
+      assert result.json["type"] == "comparison"
+      assert result.json["operator"] == "match"
+    end
+
+    test "compiles match operator with regex placeholder" do
+      {:ok, result} = Compiler.compile("${field} matches ${regex}")
+
+      assert %Comparison{
+               operator: :match,
+               left: %Field{path: "${field}", placeholder?: true},
+               right: %Field{path: "${regex}", placeholder?: true}
+             } = result.ast
+
+      assert result.json["type"] == "comparison"
+      assert result.json["operator"] == "match"
+    end
+  end
 end

@@ -20,11 +20,6 @@ defmodule Horus.Blueprint.AST.Operator.And do
   def precedence, do: 20
 
   @impl true
-  def parser_combinator(_ctx) do
-    choice([string("and"), string("&&")])
-  end
-
-  @impl true
   def atomic?, do: false
 
   @impl true

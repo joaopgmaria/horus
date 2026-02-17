@@ -18,7 +18,7 @@ defmodule Horus.Blueprint.AST.Expression.Comparison do
       }
   """
 
-  @type operator :: :presence | :eq
+  @type operator :: :presence | :eq | :match
 
   @type t :: %__MODULE__{
           operator: operator(),

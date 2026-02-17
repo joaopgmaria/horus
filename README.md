@@ -80,10 +80,9 @@ parameters: %{
 
 | Operator | Example | Description |
 |----------|---------|-------------|
-| `is a` | `${age} is a number` | Type checking |
 | `is required` | `${email} is required` | Field presence |
 | `is` / `equals` | `${status} is "active"` | Value equality (`is` is an alias for `equals`) |
-| `if...then` | `if ${type} is "premium" then ${card} is required` | Conditional logic |
+| `match` | `${phone} should match /\d{3}\d+/` | Regex matcher |
 
 See [Blueprint DSL & Compilation](docs/notion/blueprint-dsl.md) for complete operator reference.
 
@@ -142,7 +141,8 @@ horus/
 ├── lib/
 │   ├── horus/
 │   │   ├── blueprint/          # DSL parser & compiler
-│   │   ├── expression/         # Expression types & evaluator
+│   │   │   ├── expression/     # Expression types & evaluator
+│   │   │   └── operator/       # Operators
 │   │   ├── engine/             # Rule execution engine
 │   │   ├── format_plugin/      # JSON/XML/YAML plugins
 │   │   └── rules/              # Rule management

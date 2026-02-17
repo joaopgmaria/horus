@@ -26,7 +26,8 @@ defmodule Horus.Blueprint.AST.Operator.Literal do
       atom_literal(),
       float_literal(),
       integer_literal(),
-      boolean_literal()
+      boolean_literal(),
+      regex_literal()
     ])
     |> tag(:literal)
   end
@@ -39,6 +40,8 @@ defmodule Horus.Blueprint.AST.Operator.Literal do
       [{:integer, val}] -> %Literal{value: val, type: :integer}
       [{:float, val}] -> %Literal{value: val, type: :number}
       [{:boolean, val}] -> %Literal{value: val, type: :boolean}
+      [{:regex, val}] -> %Literal{value: val, type: :regex}
+      _ -> raise "Unexpected tokens for literal: #{inspect(tokens)}"
     end
   end
 
@@ -87,5 +90,12 @@ defmodule Horus.Blueprint.AST.Operator.Literal do
     |> ascii_string([?a..?z, ?_, ?0..?9], min: 1)
     |> map({String, :to_atom, []})
     |> unwrap_and_tag(:atom)
+  end
+
+  defp regex_literal do
+    ignore(string("/"))
+    |> utf8_string([not: ?/], min: 1)
+    |> ignore(string("/"))
+    |> unwrap_and_tag(:regex)
   end
 end

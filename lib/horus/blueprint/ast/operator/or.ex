@@ -20,11 +20,6 @@ defmodule Horus.Blueprint.AST.Operator.Or do
   def precedence, do: 10
 
   @impl true
-  def parser_combinator(_ctx) do
-    choice([string("or"), string("||")])
-  end
-
-  @impl true
   def atomic?, do: false
 
   @impl true
