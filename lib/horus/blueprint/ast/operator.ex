@@ -83,18 +83,37 @@ defmodule Horus.Blueprint.AST.Operator do
       @impl true
       def parser_combinator(ctx) do
         # Build combinators for all forms dynamically
-        operator_forms()
-        |> Enum.map(
-          &Horus.Blueprint.AST.Operator.build_form_combinator(
-            ctx,
-            &1,
-            operator_name()
-          )
-        )
-        |> choice()
+        case operator_forms() do
+          [single_form] ->
+            Horus.Blueprint.AST.Operator.build_form_combinator(
+              ctx,
+              single_form,
+              operator_name()
+            )
+
+          forms ->
+            forms
+            |> Enum.map(
+              &Horus.Blueprint.AST.Operator.build_form_combinator(
+                ctx,
+                &1,
+                operator_name()
+              )
+            )
+            |> choice()
+        end
       end
 
-      defoverridable parser_combinator: 1
+      @impl true
+      def operator_type, do: :atomic
+
+      @impl true
+      def precedence, do: 100
+
+      @impl true
+      def atomic?, do: operator_type() == :atomic
+
+      defoverridable parser_combinator: 1, atomic?: 0, operator_type: 0, precedence: 0
     end
   end
 
@@ -111,13 +130,35 @@ defmodule Horus.Blueprint.AST.Operator do
   @callback operator_name() :: atom()
 
   @doc """
-  Returns all supported forms for this operator.
+  Returns the type of the operator.
 
-  This includes the main form and all alternative phrasings (aliases).
-  All forms are semantically equivalent and compile to the same AST.
+  Supported types:
+  - `:atomic` - Applies to a single field, e.g. `${field} exists`
+  - `:unary_prefix` - A unary operator with prefix syntax, e.g. `not <expr>`
+  - `:binary_infix` - A binary operator with infix syntax, e.g. `<expr> and <expr>`
+  - `:primary` - A primary expression (literals, constants), e.g. `true`, `"string"`
+  """
+  @callback operator_type() :: :atomic | :unary_prefix | :binary_infix | :primary
 
-  Returns a list of complete operator phrases.
+  @doc """
+  Returns the precedence of the operator.
+  Higher numbers represent higher precedence (evaluated first).
 
+  Standard precedences:
+  - 100: Atomic / Primary expressions
+  - 30: Unary NOT
+  - 20: Binary AND
+  - 10: Binary OR
+  """
+  @callback precedence() :: integer()
+
+  @doc """
+  Returns whether this operator is "atomic" (applies to a single field).
+  Derived from `operator_type() == :atomic` by default.
+  """
+  @callback atomic?() :: boolean()
+
+  @doc """
   ## Examples
 
       # Presence operator with multiple forms
@@ -134,15 +175,15 @@ defmodule Horus.Blueprint.AST.Operator do
       # Operator with single form
       def operator_forms, do: ["my_operator"]
 
-  ## Notes
+  @doc \"""
+  Returns all supported forms for this operator.
 
-  - First form is conventionally the "main" form
-  - All forms should be complete operator phrases
-  - Forms are tried in order - more specific forms should come first
-  - All forms compile to the same operator AST
-  - Global modal substitutions ("is" → "must be"/"should be") are NOT needed here
+  This includes the main form and all alternative phrasings (aliases).
+  All forms are semantically equivalent and compile to the same AST.
+
+  Returns a list of complete operator phrases.
   """
-  @callback operator_forms() :: [String.t(), ...]
+  @callback operator_forms() :: [String.t()]
 
   @doc """
   Returns a NimbleParsec combinator that parses this operator's syntax.

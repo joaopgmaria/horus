@@ -38,37 +38,28 @@ defmodule Horus.Blueprint.Parser do
 
   # All operators are now registered via the Operator Registry
   # Operators are loaded from application config and composed at compile time
-  registry_operators = Registry.build_combinator(@parser_context)
+  # Grammar Structure:
+  # Grammar
+  # The grammar is now dynamically built by the Registry based on operator precedences.
+  # It automatically layers atomic (presence, etc.), unary (not), and binary (and, or) operators.
+  defparsec(
+    :parse_expression,
+    Registry.build_recursive_grammar(@parser_context, :parse_expression)
+  )
 
   # Top-level DSL expression
   dsl_expr =
-    @parser_context.optional_whitespace
-    |> ignore()
-    |> concat(registry_operators)
-    |> concat(@parser_context.optional_whitespace |> ignore())
+    ignore(@parser_context.optional_whitespace)
+    |> parsec(:parse_expression)
+    |> ignore(@parser_context.optional_whitespace)
     |> eos()
 
   defparsec(:parse, dsl_expr)
 
   @doc """
-  Parses a DSL string into an AST.
+  Parses a Horus DSL string into an AST.
 
-  Returns `{:ok, ast}` on success or `{:error, reason}` on failure.
-
-  ## Examples
-
-      iex> parse_dsl("${email} exists")
-      {:ok, %Comparison{
-        operator: :presence,
-        left: %Field{path: "${email}", placeholder?: true},
-        right: nil
-      }}
-
-      iex> parse_dsl("${email} is required")
-      {:ok, %Comparison{operator: :presence, ...}}
-
-      iex> parse_dsl("invalid syntax")
-      {:error, %{message: "...", ...}}
+  Returns `{:ok, ast}` or `{:error, error_map}`.
   """
   @spec parse_dsl(String.t()) ::
           {:ok, Expression.t()}
@@ -80,12 +71,11 @@ defmodule Horus.Blueprint.Parser do
       {:error, %{message: "Unexpected input: empty string", line: 1, column: 1}}
     else
       case parse(trimmed) do
-        {:ok, tokens, "", _, _, _} ->
-          build_ast(tokens)
+        {:ok, [ast], "", _, _, _} ->
+          {:ok, ast}
 
         {:ok, _, rest, _, line, col} ->
-          # This should be unreachable due to eos() in grammar, but we keep it for safety
-          # and to provide a clear error if grammar changes.
+          # This should be unreachable due to eos() in grammar
           {:error, %{message: "Unexpected input: #{inspect(rest)}", line: line, column: col}}
 
         {:error, _reason, rest, _, line, col} ->
@@ -96,32 +86,31 @@ defmodule Horus.Blueprint.Parser do
     end
   end
 
+  # Helper to build a user-friendly error message
   defp build_friendly_error_message(rest, original) do
     cond do
-      String.starts_with?(rest, "${") and not String.contains?(rest, "}") ->
-        "Unexpected input: malformed placeholder (missing closing brace)"
-
-      String.contains?(original, "${") and not String.contains?(original, "}") ->
+      (String.starts_with?(rest, "${") and not String.contains?(rest, "}")) or
+          (String.contains?(original, "${") and not String.contains?(original, "}")) ->
         "Unexpected input: malformed placeholder (missing closing brace)"
 
       rest != "" ->
         "Unexpected input: #{String.slice(rest, 0..20)}"
 
       true ->
-        "Unexpected input: invalid syntax"
+        "Unexpected input: empty or invalid expression"
     end
   end
 
   @doc false
-  def build_ast(tokens) do
-    # tokens_to_ast will raise if structure is unknown, but since it's called
-    # only after a successful parse which uses the same operators, it shouldn't.
-    # We let it raise to be caught by Dialyzer if any branch is missing.
-    {:ok, tokens_to_ast(tokens)}
+  def build_ast([ast_node]) do
+    {:ok, ast_node}
   end
 
-  # Transform tokens to AST - delegate all to Registry
-  defp tokens_to_ast(tokens) do
-    Registry.tokens_to_ast(tokens)
+  # Helper to reduce binary logical operators (AND/OR) using the Registry
+  @doc false
+  def reduce_binary([left | rest], operator) do
+    Enum.reduce(rest, left, fn {^operator, [right]}, acc ->
+      Registry.tokens_to_ast([{operator, [acc, right]}])
+    end)
   end
 end

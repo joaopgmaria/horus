@@ -27,8 +27,8 @@ defmodule Horus.Blueprint.AST.Expression.Conditional do
   """
 
   @type t :: %__MODULE__{
-          condition: Horus.Blueprint.AST.Expression.t(),
-          then_expr: Horus.Blueprint.AST.Expression.t()
+          condition: Horus.Blueprint.AST.boolean_expression(),
+          then_expr: Horus.Blueprint.AST.boolean_expression()
         }
 
   @enforce_keys [:condition, :then_expr]
