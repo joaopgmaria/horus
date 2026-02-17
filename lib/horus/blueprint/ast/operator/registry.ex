@@ -54,41 +54,156 @@ defmodule Horus.Blueprint.AST.Operator.Registry do
   @operators Application.compile_env(:horus, :blueprint_operators, [])
 
   @doc """
-  Returns the list of all registered operators.
+  Builds the complete recursive grammar for the DSL based on registered operators.
 
-  ## Examples
+  This function dynamically constructs the layered grammar (precedence levels)
+  at compile time. It handles atomic, unary prefix, and binary infix operators.
 
-      iex> Registry.list_all_operators()
-      [Operators.Presence, Operators.TypeCheck, Operators.Equality, Operators.Conditional]
+  ## Parameters
+  - `context` - Parser context map
+  - `primary_choice_parsec` - Name of the parsec rule for the top-level expression (used for recursion in parentheses)
+
+  ## Returns
+  A NimbleParsec combinator representing the lowest precedence level (top-level).
   """
-  @spec list_all_operators() :: [module()]
-  def list_all_operators, do: @operators
+  @spec build_recursive_grammar(context :: map(), primary_choice_parsec :: atom()) ::
+          NimbleParsec.t()
+  def build_recursive_grammar(context, primary_choice_parsec) do
+    # 1. Build the primary (atomic) combinator
+    # This includes field operators, literals, and parenthesized expressions
+    primary =
+      choice([
+        # Parentheses
+        ignore(string("("))
+        |> ignore(context.optional_whitespace)
+        |> parsec(primary_choice_parsec)
+        |> ignore(context.optional_whitespace)
+        |> ignore(string(")")),
+        # Atomic field operators (Registry)
+        build_atomic_combinator(context),
+        # Primary expressions (Registry)
+        build_primary_combinator(context)
+      ])
 
-  @doc """
-  Builds a NimbleParsec combinator that tries all registered operators.
+    # 2. Group non-atomic operators by precedence
+    non_atomic_levels =
+      @operators
+      |> Enum.filter(&(not &1.atomic?()))
+      |> Enum.group_by(& &1.precedence())
+      |> Enum.sort(:desc)
 
-  The combinator uses `choice/1` to try operators in order. The first
-  operator that matches wins.
+    # 3. Layer the operators
+    # We start with primary and wrap it in each subsequent precedence level
+    Enum.reduce(non_atomic_levels, primary, fn {_precedence, ops}, inner_level ->
+      # Check the first op to determine type (assume homogeneous level)
+      first_op = List.first(ops)
 
-  ## Examples
+      if first_op.operator_type() == :unary_prefix do
+        build_unary_level(context, ops, inner_level)
+      else
+        build_binary_level(context, ops, inner_level)
+      end
+    end)
+  end
 
-      iex> ctx = Context.build()
-      iex> combinator = Registry.build_combinator(ctx)
-      # Returns a choice combinator of all operators
-  """
-  @spec build_combinator(context :: map()) :: NimbleParsec.t()
-  def build_combinator(context) do
-    case @operators do
+  # Builds choice of all primary operators (literals, etc.)
+  defp build_primary_combinator(context) do
+    @operators
+    |> Enum.filter(&(&1.operator_type() == :primary))
+    |> case do
+      [] ->
+        empty()
+
       [single_operator] ->
-        # Single operator - return its combinator directly (choice requires 2+ alternatives)
         single_operator.parser_combinator(context)
+        |> reduce({__MODULE__, :tokens_to_ast, []})
 
       operators ->
-        # Multiple operators - wrap in choice
         operators
         |> Enum.map(& &1.parser_combinator(context))
         |> choice()
+        |> reduce({__MODULE__, :tokens_to_ast, []})
     end
+  end
+
+  # Builds choice of all atomic operators
+  defp build_atomic_combinator(context) do
+    @operators
+    |> Enum.filter(fn op -> op.atomic?() and op.operator_name() != :literal end)
+    |> case do
+      [] ->
+        empty()
+
+      [single_operator] ->
+        single_operator.parser_combinator(context)
+        |> reduce({__MODULE__, :tokens_to_ast, []})
+
+      operators ->
+        operators
+        |> Enum.map(& &1.parser_combinator(context))
+        |> choice()
+        |> reduce({__MODULE__, :tokens_to_ast, []})
+    end
+  end
+
+  # Helper to build a unary precedence level (tries operators then falls back to inner)
+  defp build_unary_level(context, ops, inner_level) do
+    # Build choice of unary operators
+    unary_choices =
+      ops
+      |> Enum.map(fn op ->
+        op.parser_combinator(context)
+        |> ignore(context.whitespace)
+        |> concat(inner_level)
+        |> tag(op.operator_name())
+        |> reduce({__MODULE__, :tokens_to_ast, []})
+      end)
+
+    unary_ops =
+      case unary_choices do
+        [single] -> single
+        choices -> choice(choices)
+      end
+
+    choice([unary_ops, inner_level])
+  end
+
+  # Helper to build a binary precedence level (inner op inner op inner...)
+  defp build_binary_level(context, ops, inner_level) do
+    # first = inner
+    # rest = repeat( choice([op1, op2]) inner )
+    # then reduce binary tree
+    op_forms =
+      ops
+      |> Enum.map(fn op ->
+        op.parser_combinator(context)
+        |> tag(op.operator_name())
+      end)
+
+    op_choice =
+      case op_forms do
+        [single] -> single
+        forms -> choice(forms)
+      end
+
+    inner_level
+    |> repeat(
+      ignore(context.whitespace)
+      |> concat(op_choice)
+      |> ignore(context.whitespace)
+      |> concat(inner_level)
+    )
+    |> reduce({__MODULE__, :reduce_binary_tokens, []})
+  end
+
+  @doc false
+  def reduce_binary_tokens([left | rest]) do
+    # rest is a flat list of tokens: [{:op_name, [form]}, right_ast, {:op_name, [form]}, right_next_ast, ...]
+    rest
+    |> Enum.chunk_every(2)
+    |> Enum.reduce(left, fn [{op_name, _form}, right], acc ->
+      tokens_to_ast([{op_name, [acc, right]}])
+    end)
   end
 
   @doc """

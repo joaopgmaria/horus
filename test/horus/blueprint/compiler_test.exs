@@ -148,4 +148,63 @@ defmodule Horus.Blueprint.CompilerTest do
       assert [%{name: "${customer_email}", occurrences: 1}] = result1.parameters
     end
   end
+
+  describe "compile/1 - literals and boolean logic" do
+    alias Horus.Blueprint.AST.Expression.{Boolean, Literal}
+
+    test "compiles integer literal" do
+      {:ok, result} = Compiler.compile("42")
+      assert %Literal{value: 42, type: :integer} = result.ast
+      assert result.json["type"] == "literal"
+      assert result.json["value"] == 42
+    end
+
+    test "compiles boolean literal" do
+      {:ok, result} = Compiler.compile("true")
+      assert %Literal{value: true, type: :boolean} = result.ast
+      assert result.json["value"] == true
+    end
+
+    test "compiles boolean NOT logic" do
+      {:ok, result} = Compiler.compile("not true")
+      assert %Boolean{operator: :not, left: %Literal{value: true}} = result.ast
+      assert result.json["type"] == "boolean"
+      assert result.json["operator"] == "not"
+    end
+
+    test "compiles boolean AND logic" do
+      # Note: This might require more complex parsing if we want to support multiple expressions
+      {:ok, result} = Compiler.compile("true and false")
+
+      assert %Boolean{operator: :and, left: %Literal{value: true}, right: %Literal{value: false}} =
+               result.ast
+    end
+
+    test "compiles string literal (double quotes)" do
+      {:ok, result} = Compiler.compile("\"hello\"")
+      assert %Literal{value: "hello", type: :string} = result.ast
+    end
+
+    test "compiles string literal (single quotes)" do
+      {:ok, result} = Compiler.compile("'world'")
+      assert %Literal{value: "world", type: :string} = result.ast
+    end
+
+    test "compiles atom literal" do
+      {:ok, result} = Compiler.compile(":horus")
+      assert %Literal{value: :horus, type: :atom} = result.ast
+    end
+
+    test "compiles grouped expression with parentheses" do
+      {:ok, result} = Compiler.compile("(true or false) and true")
+      assert %Boolean{operator: :and, left: %Boolean{operator: :or}} = result.ast
+    end
+
+    test "respects operator precedence (NOT > AND > OR)" do
+      {:ok, result} = Compiler.compile("true or not false and false")
+      # This should be: true or ((not false) and false)
+      assert %Boolean{operator: :or, left: %Literal{value: true}, right: %Boolean{operator: :and}} =
+               result.ast
+    end
+  end
 end

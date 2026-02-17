@@ -28,10 +28,14 @@ defmodule Horus.Blueprint.AST do
       ["${field}"]
   """
 
+  alias Horus.Blueprint.AST.Expression.Boolean
   alias Horus.Blueprint.AST.Expression.Comparison
   alias Horus.Blueprint.AST.Expression.Conditional
   alias Horus.Blueprint.AST.Expression.Field
+  alias Horus.Blueprint.AST.Expression.Literal
   alias Horus.Blueprint.AST.Expression.Type
+
+  @type boolean_expression :: Boolean.t() | Comparison.t() | Conditional.t() | Literal.t()
 
   @doc """
   Deserializes a JSON map (from JSONB) back to an expression struct.
@@ -61,5 +65,13 @@ defmodule Horus.Blueprint.AST do
 
   def from_json(%{"type" => "conditional"} = json) do
     Conditional.from_json(Map.delete(json, "type"))
+  end
+
+  def from_json(%{"type" => "boolean"} = json) do
+    Boolean.from_json(Map.delete(json, "type"))
+  end
+
+  def from_json(%{"type" => "literal"} = json) do
+    Literal.from_json(Map.delete(json, "type"))
   end
 end
