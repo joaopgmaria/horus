@@ -49,7 +49,8 @@ config :horus, :blueprint_operators, [
   Horus.Blueprint.AST.Operator.Or,
   Horus.Blueprint.AST.Operator.Not,
   Horus.Blueprint.AST.Operator.Equality,
-  Horus.Blueprint.AST.Operator.Presence
+  Horus.Blueprint.AST.Operator.Presence,
+  Horus.Blueprint.AST.Operator.Match
   # Add more operators here as they are implemented:
   # Horus.Blueprint.AST.Operator.TypeCheck,
   # Horus.Blueprint.AST.Operator.Conditional

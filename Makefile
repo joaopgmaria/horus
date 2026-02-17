@@ -1,4 +1,4 @@
-.PHONY: help setup build up down shell test format credo dialyzer check db-setup db-migrate db-reset
+.PHONY: help setup build rebuild up down shell iex iex-server test format credo dialyzer check db-setup db-migrate db-reset
 
 help: ## Show this help message
 	@echo 'Usage: make [target]'
@@ -18,6 +18,8 @@ setup: ## Initial project setup (scaffold Phoenix app)
 build: ## Build Docker images
 	docker-compose build
 
+rebuild: clean build ## Rebuild the project by cleaning and then building agai
+
 up: ## Start all services
 	docker-compose up
 
@@ -29,6 +31,9 @@ shell: ## Open a shell in the app container
 
 iex: ## Open IEx shell
 	docker-compose run --rm app iex -S mix
+
+iex-server: ## Open IEx shell with server running
+	docker-compose run -p 4000:4000 --rm app iex -S mix phx.server
 
 test: ## Run tests
 	docker-compose run --rm -e MIX_ENV=test app mix test
