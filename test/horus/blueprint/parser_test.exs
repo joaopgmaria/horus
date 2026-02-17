@@ -1,7 +1,7 @@
 defmodule Horus.Blueprint.ParserTest do
   use ExUnit.Case, async: true
 
-  alias Horus.Blueprint.AST.Expression.{Comparison, Field}
+  alias Horus.Blueprint.AST.Expression.{Comparison, Field, Literal}
   alias Horus.Blueprint.Parser
 
   describe "parse_dsl/1 - integration with Registry" do
@@ -42,6 +42,54 @@ defmodule Horus.Blueprint.ParserTest do
         expected_path = "${#{placeholder}}"
         assert %Comparison{left: %Field{path: ^expected_path}} = ast
       end
+    end
+
+    test "successfully parses Equality operator with literals" do
+      {:ok, ast} = Parser.parse_dsl("${status} equals 'active'")
+
+      assert %Comparison{
+               operator: :eq,
+               left: %Field{path: "${status}", placeholder?: true},
+               right: %Literal{value: "active", type: :string}
+             } = ast
+    end
+
+    test "successfully parses all Equality operator forms" do
+      forms = [
+        "equals",
+        "is",
+        "==",
+        "is equal to",
+        "must be",
+        "should be",
+        "must equal",
+        "should equal"
+      ]
+
+      for form <- forms do
+        {:ok, ast} = Parser.parse_dsl("${field} #{form} 123")
+        assert %Comparison{operator: :eq, right: %Literal{value: 123}} = ast
+      end
+    end
+
+    test "parses equality between two fields" do
+      {:ok, ast} = Parser.parse_dsl("${field1} is ${field2}")
+
+      assert %Comparison{
+               operator: :eq,
+               left: %Field{path: "${field1}"},
+               right: %Field{path: "${field2}"}
+             } = ast
+    end
+
+    test "handles operator precedence (Equality before And)" do
+      {:ok, ast} = Parser.parse_dsl("${a} is 1 and ${b} is 2")
+
+      assert %Horus.Blueprint.AST.Expression.Boolean{
+               operator: :and,
+               left: %Comparison{operator: :eq},
+               right: %Comparison{operator: :eq}
+             } = ast
     end
   end
 

@@ -91,8 +91,9 @@ defmodule Horus.Blueprint.CompilerTest do
       assert {:error, %{message: _}} = Compiler.compile("${field exists")
     end
 
-    test "returns error for incomplete expression" do
-      assert {:error, %{message: _}} = Compiler.compile("${field}")
+    test "compiles plain field expression" do
+      {:ok, result} = Compiler.compile("${field}")
+      assert %Field{path: "${field}"} = result.ast
     end
 
     test "error includes line and column information" do

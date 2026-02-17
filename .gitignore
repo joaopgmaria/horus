@@ -84,3 +84,6 @@ cover/
 
 # Dialyzer PLT files
 /priv/plts/
+
+# Test output
+test_output.txt
