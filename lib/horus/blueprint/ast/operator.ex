@@ -82,26 +82,12 @@ defmodule Horus.Blueprint.AST.Operator do
       """
       @impl true
       def parser_combinator(ctx) do
-        # Build combinators for all forms dynamically
-        case operator_forms() do
-          [single_form] ->
-            Horus.Blueprint.AST.Operator.build_form_combinator(
-              ctx,
-              single_form,
-              operator_name()
-            )
-
-          forms ->
-            forms
-            |> Enum.map(
-              &Horus.Blueprint.AST.Operator.build_form_combinator(
-                ctx,
-                &1,
-                operator_name()
-              )
-            )
-            |> choice()
-        end
+        Horus.Blueprint.AST.Operator.build_parser_combinator(
+          ctx,
+          operator_forms(),
+          operator_type(),
+          operator_name()
+        )
       end
 
       @impl true
@@ -238,6 +224,35 @@ defmodule Horus.Blueprint.AST.Operator do
   @callback tokens_to_ast(tokens :: list()) :: Horus.Blueprint.AST.Expression.t()
 
   @doc """
+  Builds a parser combinator for the given forms and operator type.
+  Used by the default implementation of `parser_combinator/1`.
+  """
+  @spec build_parser_combinator(map(), [String.t()], atom(), atom()) :: NimbleParsec.t()
+  def build_parser_combinator(ctx, forms, type, name) do
+    case forms do
+      [] ->
+        empty()
+
+      [single_form] ->
+        build_form_or_symbol_combinator(ctx, single_form, type, name)
+
+      forms ->
+        forms
+        |> Enum.sort_by(&String.length/1, :desc)
+        |> Enum.map(&build_form_or_symbol_combinator(ctx, &1, type, name))
+        |> choice()
+    end
+  end
+
+  defp build_form_or_symbol_combinator(ctx, form, :atomic, name) do
+    build_form_combinator(ctx, form, name)
+  end
+
+  defp build_form_or_symbol_combinator(ctx, form, _type, name) do
+    build_symbol_combinator(ctx, form, name)
+  end
+
+  @doc """
   Builds a NimbleParsec combinator for a single operator form.
 
   This helper function constructs a combinator that:
@@ -262,20 +277,48 @@ defmodule Horus.Blueprint.AST.Operator do
   """
   @spec build_form_combinator(map(), String.t(), atom()) :: NimbleParsec.t()
   def build_form_combinator(ctx, form_phrase, operator_atom) do
-    # Split form phrase into words
-    words = String.split(form_phrase, " ")
-
-    # Build combinator that matches all words in sequence with whitespace between them
-    combinator =
-      Enum.reduce(words, ctx.placeholder, fn word, acc ->
-        acc
-        |> ignore(ctx.whitespace)
-        |> ignore(string(word))
-      end)
-
-    # Add the operator token and tag with operator name
-    combinator
-    |> concat(empty() |> replace(operator_atom) |> unwrap_and_tag(:operator))
+    # For atomic operators: placeholder <ws> word1 <ws> word2 ...
+    # Placeholder
+    ctx.placeholder
+    # build_symbol_combinator will add whitespace before the first word
+    # since acc (placeholder) is not empty()
+    |> build_symbol_combinator(ctx, form_phrase, operator_atom)
+    # Tag it for atomic dispatch
     |> tag(operator_atom)
+  end
+
+  @doc """
+  Builds a NimbleParsec combinator for an operator symbol/phrase.
+  Does NOT include the placeholder or trailing tag. Used for infix and unary operators.
+  """
+  @spec build_symbol_combinator(map(), String.t(), atom()) :: NimbleParsec.t()
+  def build_symbol_combinator(ctx, form_phrase, operator_atom) do
+    # For infix/unary, Registry handles leading space, so leading_ws? is false.
+    build_symbol_combinator_logic(empty(), ctx, form_phrase, operator_atom, false)
+  end
+
+  @doc """
+  Builds a NimbleParsec combinator for an operator symbol/phrase, starting from an accumulator.
+  Used by atomic operators to build on top of the placeholder and whitespace.
+  """
+  @spec build_symbol_combinator(NimbleParsec.t(), map(), String.t(), atom()) :: NimbleParsec.t()
+  def build_symbol_combinator(acc, ctx, form_phrase, operator_atom) do
+    # For atomic: we ALREADY matching placeholder, now we need WS then first word.
+    build_symbol_combinator_logic(acc, ctx, form_phrase, operator_atom, true)
+  end
+
+  defp build_symbol_combinator_logic(acc, ctx, form_phrase, operator_atom, leading_ws?) do
+    combinator =
+      if leading_ws? do
+        acc |> ignore(ctx.whitespace) |> ignore(string(form_phrase))
+      else
+        acc |> ignore(string(form_phrase))
+      end
+
+    # Add the operator identity token
+    op_token = empty() |> replace(operator_atom) |> unwrap_and_tag(:operator)
+
+    combinator
+    |> concat(op_token)
   end
 end

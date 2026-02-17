@@ -43,14 +43,15 @@ config :phoenix, :json_library, Jason
 # Configure which operators are enabled for this environment
 # This allows testing operators in dev/test before promoting to production
 config :horus, :blueprint_operators, [
-  Horus.Blueprint.AST.Operator.Presence,
+  Horus.Blueprint.AST.Operator.Field,
   Horus.Blueprint.AST.Operator.Literal,
-  Horus.Blueprint.AST.Operator.Not,
   Horus.Blueprint.AST.Operator.And,
-  Horus.Blueprint.AST.Operator.Or
+  Horus.Blueprint.AST.Operator.Or,
+  Horus.Blueprint.AST.Operator.Not,
+  Horus.Blueprint.AST.Operator.Equality,
+  Horus.Blueprint.AST.Operator.Presence
   # Add more operators here as they are implemented:
   # Horus.Blueprint.AST.Operator.TypeCheck,
-  # Horus.Blueprint.AST.Operator.Equality,
   # Horus.Blueprint.AST.Operator.Conditional
 ]
 
