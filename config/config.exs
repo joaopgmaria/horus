@@ -39,6 +39,17 @@ config :logger, :default_formatter,
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason
 
+# Blueprint DSL Operators
+# Configure which operators are enabled for this environment
+# This allows testing operators in dev/test before promoting to production
+config :horus, :blueprint_operators, [
+  Horus.Blueprint.AST.Operator.Presence
+  # Add more operators here as they are implemented:
+  # Horus.Blueprint.AST.Operator.TypeCheck,
+  # Horus.Blueprint.AST.Operator.Equality,
+  # Horus.Blueprint.AST.Operator.Conditional
+]
+
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
 import_config "#{config_env()}.exs"

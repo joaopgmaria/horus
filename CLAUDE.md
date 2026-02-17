@@ -45,17 +45,17 @@ Horus is a Phoenix-based validation service designed to run flexible, configurab
 - Natural language DSL with placeholders: `${field} must be an integer between ${lower_bound} and ${upper_bound}`
 - Compiled to expression-based Abstract Syntax Tree (AST) using NimbleParsec
 - **Expression System**: Everything is an expression that evaluates itself recursively
-  - FieldExpression: Fetches values via format plugins
-  - TypeExpression: Represents types (integer, string, etc.)
-  - IntegerExpression, StringExpression, DateExpression, RegexExpression: Literal values or function results
-  - BooleanExpression: Returns true/false
-    - ComparisonExpression: "is a", "is", "greater than", "matches", etc.
-    - ConditionalExpression: if/then logic
-    - CompositeExpression: and/or combinators
-    - AggregateExpression: "all", "any", "none", "exactly one" (applies comparison to array elements)
-  - FunctionExpression: Wraps functions (count of, uppercase, etc.) and declares return type
+  - Field: Fetches values via format plugins
+  - Type: Represents types (integer, string, etc.)
+  - Integer, String, Date, Regex: Literal values or function results
+  - Boolean: Returns true/false
+    - Comparison: "is a", "is", "greater than", "matches", etc.
+    - Conditional: if/then logic
+    - Composite: and/or combinators
+    - Aggregate: "all", "any", "none", "exactly one" (applies comparison to array elements)
+  - Function: Wraps functions (count of, uppercase, etc.) and declares return type
 - **Fluent Type System**: Expressions know what types they accept (compile-time validation)
-- **Context-Aware Placeholders**: `${field}` has no inherent type - context determines if it becomes FieldExpression, TypeExpression, etc.
+- **Context-Aware Placeholders**: `${field}` has no inherent type - context determines if it becomes Field, Type, etc.
 - **Evaluation Flow**: Cascades down expression tree, bubbles results up
 - **Parameter Binding**: Happens at rule creation time (not execution) - bound AST stored for fast execution
 - Stored as serialized expression tree in database
@@ -310,7 +310,7 @@ phase-{N}/{deliverable-slug}
    git commit -m "Implement DSL parser with NimbleParsec
 
    - Add expression types (Field, Type, Comparison, Conditional)
-   - Implement MVP operators (is a, is required, equals, if...then)
+   - Implement MVP operators (type_check, equality, presence, if...then)
    - Add parameter placeholder resolution
    - Include comprehensive test suite
 
@@ -374,7 +374,7 @@ Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>
 feat: add expression-based AST evaluation
 
 - Implement Expression behaviour with evaluate/2 callback
-- Add FieldExpression, TypeExpression, ComparisonExpression
+- Add Field, Type, Comparison
 - Support recursive evaluation with context passing
 - Include comprehensive unit tests
 
@@ -487,4 +487,4 @@ iex -S mix
 - Consider using behaviours for validator contracts
 - Ensure validation errors are structured and informative
 - Test edge cases thoroughly
-- Run make check before commiting changes
+- Run `make check` before commiting changes
