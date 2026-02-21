@@ -87,3 +87,8 @@ cover/
 
 # Test output
 test_output.txt
+
+AGENTS.md
+CLAUDE.md
+REQUIREMENTS.md
+openspec/
